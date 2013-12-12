@@ -1,4 +1,4 @@
-AM_CXXFLAGS = `llvm-config --cxxflags` -Werror -Wall -O0 -g
+AM_CXXFLAGS = `llvm-config --cxxflags` -Werror -Wall
 
 noinst_LTLIBRARIES = libsat.la
 lib_LTLIBRARIES    = libintck.la libcmpck.la

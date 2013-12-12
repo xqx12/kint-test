@@ -1,0 +1,5 @@
+---
+bug: uadd
+status: sat
+stack: 
+ - /home/xqx/projects/git/kint/test/linux/agp-2011-1745.c:37:2

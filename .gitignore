@@ -17,3 +17,5 @@ Makefile.in
 /tests/Makefile
 /libtool
 /stamp-h1
+*.ll
+tags

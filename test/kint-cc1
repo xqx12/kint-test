@@ -22,22 +22,29 @@ def cc(llvmcc, src, argv):
 	# Use -fstrict-overflow to distinguish signed/unsigned integers.
 	more = ['-S', '-flto', '-fstrict-overflow', '-O0', '-g']
 	p1 = subprocess.Popen(llvmcc + argv + more + [src], stdout=subprocess.PIPE)
+	print "xqx\n"
+	print llvmcc + argv + more + [src]
 	# Don't invoke -early-cse, which may hide undefined behavior bugs.
 	opts = ['-strip-debug-declare', '-simplifycfg', '-scalarrepl', '-lower-expect']
 	p2 = subprocess.Popen(['opt', '-S', '-o', out] + opts, stdin=p1.stdout)
+	print ['opt', '-S', '-o', out] + opts
 	p1.stdout.close()
 	p2.communicate()
 	return p1.returncode
 
 def main():
 	llvmcc = os.getenv('LLVMCC', 'clang -no-integrated-as').split(' ', 1)
+#	print llvmcc
 	argv = sys.argv[1:]
+#	print argv 
 	exts = ['.c', '.cc', '.cpp', '.cxx', '.C']
 	# Keep silence for preprocesssing and make depend.
 	if any(a in argv for a in ['-E', '-M', '-MM']):
 		return
 	# Extrace input source files.
 	srcs = [a for a in argv if os.path.splitext(a)[1] in exts]
+	#for aa in argv:
+	#	print os.path.splitext(aa)[1] 
 	# Keep silence if only '-' is given; otherwise we need to duplicate
 	# data from stdin for the next consumer (e.g., gcc).
 	if not srcs:

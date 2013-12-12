@@ -60,6 +60,7 @@ bool IntSat::runOnModule(Module &M) {
 	Trap = M.getFunction("int.sat");
 	if (!Trap)
 		return false;
+	Diag.xqx_print("int.sat get");
 	TD.reset(new DataLayout(&M));
 	MD_bug = M.getContext().getMDKindID("bug");
 	for (Module::iterator i = M.begin(), e = M.end(); i != e; ++i) {

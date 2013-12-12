@@ -1,0 +1,5 @@
+---
+bug: size
+status: sat
+stack: 
+ - /home/xqx/projects/git/kint/test/linux/xfs-2011-4077.c:64:3

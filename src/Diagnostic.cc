@@ -45,6 +45,10 @@ void Diagnostic::bug(const Twine &Str) {
 	OS << "---\n" << "bug: " << Str << "\n";
 }
 
+void Diagnostic::xqx_print(const Twine &Str) {
+	OS <<  "xinfo: " << Str << "\n";
+}
+
 void Diagnostic::classify(Value *V) {
 	Instruction *I = dyn_cast<Instruction>(V);
 	if (!I)

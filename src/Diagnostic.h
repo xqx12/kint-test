@@ -25,7 +25,8 @@ public:
 		OS << Val;
 		return *this;
 	}
-
+	//addbyxqx2013 for print message
+	void xqx_print(const llvm::Twine &);
 private:
 	llvm::raw_ostream &OS;
 };

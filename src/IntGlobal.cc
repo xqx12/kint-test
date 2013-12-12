@@ -135,7 +135,12 @@ int main(int argc, char **argv)
 	RPass.run(Modules);
 
 	if (NoWriteback) {
+		errs() << "------------------dumpGraphes-----------------\n";
+		CGPass.dumpCallees();
+		CGPass.dumpFuncPtrs();
+		errs() << "------------------dumpTaints-----------------\n";
 		TPass.dumpTaints();
+		errs() << "------------------dumpRange-----------------\n";
 		RPass.dumpRange();
 	}
 
