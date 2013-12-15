@@ -41,6 +41,23 @@ void Diagnostic::backtrace(Instruction *I) {
 	}
 }
 
+void Diagnostic::xqx_backtrace(Instruction *I) {
+	MDNode *MD = I->getDebugLoc().getAsMDNode(I->getContext());
+	if (!MD)
+		return;
+	DILocation Loc(MD);
+//	while(1){
+	Function *F = I->getParent()->getParent();
+	std::string FName = F->getName();
+	if(FName.find("overflow") != std::string::npos)
+		xqx_print(F->getName());
+//		Loc = Loc.getOrigLocation();
+//		if (!Loc.Verify())
+//			break;
+
+//	}
+//	OS << "Func:\n" ;
+}
 void Diagnostic::bug(const Twine &Str) {
 	OS << "---\n" << "bug: " << Str << "\n";
 }

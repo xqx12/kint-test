@@ -27,6 +27,11 @@ struct ValueVisitor : InstVisitor<ValueVisitor, SMTExpr> {
 			V->dump();
 			assert(0 && "Unknown type!");
 		}
+		llvm::errs() << "ValueVisitor-analyze:===\n";
+		V->dump();
+		if (Instruction *ITmp = dyn_cast<Instruction>(V))
+			llvm::errs() << "I->OPCODE = " << ITmp->getOpcode() << "\n";
+		llvm::errs() << "ValueVisitor-analyze:===end\n";
 		if (Instruction *I = dyn_cast<Instruction>(V))
 			return visit(I);
 		else if (Constant *C = dyn_cast<Constant>(V))
@@ -90,6 +95,7 @@ struct ValueVisitor : InstVisitor<ValueVisitor, SMTExpr> {
 	}
 
 	SMTExpr visitICmpInst(ICmpInst &I) {
+		llvm::errs() << "visitICmpInst++++\n";
 		SMTExpr L = get(I.getOperand(0)), R = get(I.getOperand(1));
 		switch (I.getPredicate()) {
 		default: assert(0);
@@ -266,6 +272,7 @@ private:
 	}
 
 	SMTExpr mk_fresh(Value *V) {
+		llvm::errs() << "mk_fresh:---\n";
 		std::string Name;
 		{
 			raw_string_ostream OS(Name);
@@ -273,6 +280,7 @@ private:
 			// Make name unique, e.g., undef.
 			OS << "@" << V;
 		}
+		llvm::errs() << "mk_fresh:---" << Name << "\n";
 		return SMT.bvvar(getBitWidth(V), Name.c_str());
 	}
 

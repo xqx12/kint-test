@@ -27,6 +27,7 @@ public:
 	}
 	//addbyxqx2013 for print message
 	void xqx_print(const llvm::Twine &);
+	void xqx_backtrace(llvm::Instruction *);
 private:
 	llvm::raw_ostream &OS;
 };

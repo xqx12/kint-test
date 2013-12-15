@@ -135,8 +135,9 @@ int main(int argc, char **argv)
 	RPass.run(Modules);
 
 	if (NoWriteback) {
-		errs() << "------------------dumpGraphes-----------------\n";
+		errs() << "------------------dumpCallee-----------------\n";
 		CGPass.dumpCallees();
+		errs() << "------------------dumpFuncPtrs-----------------\n";
 		CGPass.dumpFuncPtrs();
 		errs() << "------------------dumpTaints-----------------\n";
 		TPass.dumpTaints();

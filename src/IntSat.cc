@@ -60,13 +60,16 @@ bool IntSat::runOnModule(Module &M) {
 	Trap = M.getFunction("int.sat");
 	if (!Trap)
 		return false;
-	Diag.xqx_print("int.sat get");
+	//Diag.xqx_print("int.sat get");
 	TD.reset(new DataLayout(&M));
 	MD_bug = M.getContext().getMDKindID("bug");
+	llvm::errs() << *Trap << "\n";
 	for (Module::iterator i = M.begin(), e = M.end(); i != e; ++i) {
 		Function &F = *i;
+		llvm::errs() << F << "\n";
 		if (F.empty())
 			continue;
+		llvm::errs()  <<  "--------runOnFunction----------\n";
 		runOnFunction(F);
 	}
 	return false;
@@ -78,14 +81,18 @@ void IntSat::runOnFunction(Function &F) {
 	ReportedBugs.clear();
 	for (inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i) {
 		CallInst *CI = dyn_cast<CallInst>(&*i);
-		if (CI && CI->getCalledFunction() == Trap)
+		//llvm::errs()<< "funcName: " << i->getName() << "\n";
+		if (CI && CI->getCalledFunction() == Trap){
+			llvm::errs()  <<  "check CI:" << *CI << "\n";
 			check(CI);
+		}
 	}
 }
 
 void IntSat::check(CallInst *I) {
 	assert(I->getNumArgOperands() >= 1);
 	Value *V = I->getArgOperand(0);
+	llvm::errs()  <<  "Value:" << *V << "\n";
 	assert(V->getType()->isIntegerTy(1));
 	if (isa<ConstantInt>(V))
 		return;
@@ -93,10 +100,14 @@ void IntSat::check(CallInst *I) {
 		return;
 
 	const DebugLoc &DbgLoc = I->getDebugLoc();
+	//llvm::errs()  <<  "DbgLoc:" << DbgLoc << "\n";
+	//DbgLoc.dump();
+	assert(V->getType()->isIntegerTy(1));
 	if (DbgLoc.isUnknown())
 		return;
 	if (!I->getMetadata(MD_bug))
 		return;
+	llvm::errs()  <<  "Metadata:" << I->getMetadata(MD_bug) << "\n";
 
 	int SMTRes;
 	if (SMTFork() == 0)
@@ -109,10 +120,20 @@ void IntSat::check(CallInst *I) {
 }
 
 SMTStatus IntSat::query(Value *V, Instruction *I) {
+	llvm::errs()  <<  "query---\nValue:" << *V << "\n";
+	llvm::errs()  <<  "Instruction:" << *I << "\n";
+
 	SMTSolver SMT(SMTModelOpt);
 	ValueGen VG(*TD, SMT);
 	PathGen PG(VG, BackEdges);
-	SMTExpr Query = SMT.bvand(VG.get(V), PG.get(I->getParent()));
+	SMTExpr VExpr = VG.get(V);
+	SMTExpr PExpr = PG.get(I->getParent());
+	llvm::errs()  <<  "Value SMT ---\n" ;
+	SMT.dump(VExpr) ;
+	llvm::errs()  <<  "Path SMT ---\n" ;
+	SMT.dump(PExpr) ;
+//	SMTExpr Query = SMT.bvand(VG.get(V), PG.get(I->getParent()));
+	SMTExpr Query = SMT.bvand(VExpr, PExpr);
 	SMTModel Model = NULL;
 	SMTStatus Res = SMT.query(Query, &Model);
 	SMT.decref(Query);
@@ -125,6 +146,7 @@ SMTStatus IntSat::query(Value *V, Instruction *I) {
 	Diag.status(Res);
 	Diag.classify(I);
 	Diag.backtrace(I);
+	Diag.xqx_backtrace(I);
 	// Output model.
 	if (SMTModelOpt && Model) {
 		Diag << "model: |\n";

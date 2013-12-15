@@ -47,6 +47,7 @@ void SMTSolver::assume(SMTExpr e_) {
 }
 
 SMTStatus SMTSolver::query(SMTExpr e_, SMTModel *m_) {
+	dump(e_);
 	boolector_assume(ctx, e);
 	switch (boolector_sat(ctx)) {
 	default:              return SMT_UNDEF;

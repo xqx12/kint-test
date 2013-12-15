@@ -208,7 +208,7 @@ bool AnnotationPass::runOnFunction(Function &F) {
 	SmallPtrSet<Instruction *, 4> EraseSet;
 	for (inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i) {
 		Instruction *I = &*i;
-		I->dump();
+		//I->dump();
 
 		if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
 			Changed |= annotateLoadStore(I);
