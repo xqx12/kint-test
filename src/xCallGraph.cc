@@ -45,12 +45,31 @@ private:
     }
 //	void rewriteSize(Function *F);
 //	void rewriteSizeAt(CallInst *I, NamedParam *NPs);
+	void printCalledFuncPath(Function *srcFunc, Function *dstFunc);
 };
 
 } // anonymous namespace
 
+// print the called function
+void xCallGraphPass::printCalledFuncPath(Function *srcFunc, Function *dstFunc){
+	CalledFunctions::iterator ii, ee;
+	ii = calledFunctionMap[srcFunc].begin();
+	ee = calledFunctionMap[dstFunc].end();
+	for( ; ii != ee; ++ii){
+		Function *FTmp = ii->first;
+		llvm::errs() << "\t" << FTmp->getName() << "-->" ;
+		if( FTmp == dstFunc ){
+			llvm::errs() << "end. \na path found\n\n";
+			break;
+		}
+		else
+		{
+			printCalledFuncPath(FTmp, dstFunc);
+		}
+	}
+	
 
-
+}
 
 //bool xCallGraphPass::runOnModule(Module &M) {
 	//unsigned sccNum = 0;
@@ -89,6 +108,12 @@ bool xCallGraphPass::runOnModule(Module &M) {
 	CallGraphNode *cgNode = CG.getRoot();
 	cgNode->dump();
 
+	Function *startFunc;
+	Function *endFunc;
+	startFunc = M.getFunction("main");
+	endFunc = M.getFunction("int_overflow");
+
+//	llvm::errs() << "startFunc" << *startFunc << "endfunc:" << *endFunc << "\n" ;
 	
 	for (Module::iterator i = M.begin(), e = M.end(); i != e; ++i) {
 		
@@ -151,6 +176,19 @@ bool xCallGraphPass::runOnModule(Module &M) {
 		}
 
 	}
+
+	llvm::errs() << "get Function Path: " << endFunc->getName() 
+		<< " to " << startFunc->getName() << " \n";
+
+	//CalledFunctions::iterator ii, ee;
+	//ii = calledFunctionMap[endFunc].begin();
+	//ee = calledFunctionMap[endFunc].end();
+	//for( ; ii != ee; ++ii){
+		//Function *FTmp = ii->first;
+		//llvm::errs() << "called by:" << FTmp->getName() << "\n" ;
+	//}
+	printCalledFuncPath(endFunc, startFunc);
+
 
 	llvm::errs() << "on-end\n";
 	return false;
