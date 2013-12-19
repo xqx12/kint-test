@@ -19,3 +19,4 @@ Makefile.in
 /stamp-h1
 *.ll
 tags
+cscope*

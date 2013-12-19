@@ -72,6 +72,9 @@ static MDNode * findSink(Value *V) {
 
 static Instruction * insertIntSat(Value *V, Instruction *I, Instruction *IP, 
 		StringRef Bug, const DebugLoc &DbgLoc) {
+	llvm::errs() << "insertIntsat:\n " << "\tValue: " << *V << "\n" 
+		<< "\tInst: " << *I << "\n" << "\tInstp: " << *IP << "\n" 
+		<< "\tBug: " << Bug <<  "\n\n";
 	Module *M = IP->getParent()->getParent()->getParent();
 	LLVMContext &C = M->getContext();
 	FunctionType *T = FunctionType::get(Type::getVoidTy(C), Type::getInt1Ty(C), false);
@@ -94,6 +97,7 @@ static Instruction * insertIntSat(Value *V, Instruction *I, Instruction *IP,
 	if (MDNode *MD = findSink(I))
 		CI->setMetadata("sink", MD);
 
+	llvm::errs() << "CI:" << *CI << "\n";
 	return CI;
 }
 
@@ -189,6 +193,7 @@ bool IntRewrite::insertOverflowCheck(Instruction *I, Intrinsic::ID SID, Intrinsi
 	Value *V = Builder->CreateExtractValue(CI, 1);
 	// llvm.[s|u][add|sub|mul].with.overflow.*
 	StringRef Anno = F->getName().substr(5, 4);
+	llvm::errs() << "InsertFuncName: " <<  F->getName() << "\n";
 	if (hasNSW) {
 		// Insert the check eagerly for signed integer overflow,
 		// if -fwrapv is not given.
@@ -214,6 +219,7 @@ bool IntRewrite::insertOverflowCheck(Instruction *I, Intrinsic::ID SID, Intrinsi
 		Worklist.pop_back();
 		for (Value::use_iterator i = E->use_begin(), e = E->use_end(); i != e; ++i) {
 			User *U = *i;
+			llvm::errs() << "User: " << *U << "\n";
 			// Observable point.
 			if (isObservable(U)) {
 				// U must be an instruction for now.

@@ -24,8 +24,14 @@ struct xCallGraphPass : ModulePass {
 	static char ID;
 	xCallGraphPass() : ModulePass(ID) {}
 
-	bool runOnModule(Module &);
+	typedef std::map<Function *, Instruction *> CalledFunc;
+//	typedef std::vector<CalledFunc> CalledFunctions;
+	typedef std::vector< std::pair<Function *, Instruction *> > CalledFunctions;
+	typedef std::map<const Function *, CalledFunctions> FunctionMapTy;
+//	typedef std::map<const Function *, CallGraphNode * > FunctionMapTy;
+	FunctionMapTy  calledFunctionMap;
 
+	bool runOnModule(Module &);
 private:
 	typedef IRBuilder<> BuilderTy;
 	BuilderTy *Builder;
@@ -99,19 +105,55 @@ bool xCallGraphPass::runOnModule(Module &M) {
 			continue;
 		}
 		cgNode = CG.getOrInsertFunction(F);
+		F = cgNode->getFunction();
+		llvm::errs() << "Function-cgNode: " << F->getName() << "--------\n";
 //		cgNode->dump();
 		for (CallGraphNode::const_iterator I = cgNode->begin(), E = cgNode->end();
 				I != E; ++I){
 			llvm::errs() << "\tCS<" << I->first << "> calls";
-			if (Function *FI = I->second->getFunction())
+			if(I->first){
+				Instruction *TmpIns = dyn_cast<Instruction>(I->first);
+				if(isa<Instruction>(TmpIns))
+					llvm::errs() << "\t" << *TmpIns << "\n";
+			}
+			Function *FI = I->second->getFunction();
+			if ( FI )
 				llvm::errs() << "\tfunctionName '" << FI->getName() <<"'\n";
 			else
 				llvm::errs() << "\texternal node\n";
 			
+			//create the called graph;
+			FunctionMapTy::iterator it = calledFunctionMap.find(FI);
+			if(it==calledFunctionMap.end()) //not find
+			{
+				//CallGraphNode *newNode = new CallGraphNode(FI);
+				//CallGraphNode *newNode = I->second;
+				if(I->first){
+
+				//	CallSite CS(dyn_cast<Instruction>(I->first));
+				//	newNode->addCalledFunction(CS, newNode);
+				//	calledFunctionMap[FI] = newNode;
+					calledFunctionMap[FI].push_back(std::make_pair(F, dyn_cast<Instruction>(I->first)));
+				}
+
+				
+			}
+			else{
+				//CallGraphNode *calledNode = calledFunctionMap[FI];
+				if(I->first){
+					//CallSite CS(dyn_cast<Instruction>(I->first));
+					//calledNode->addCalledFunction(CS, calledNode);
+					//calledFunctionMap[FI].push_back(std::make_pair(F, dyn_cast<Instruction>(I->first)));
+					it->second.push_back(std::make_pair(F, dyn_cast<Instruction>(I->first)));
+				}
+			}
+			
 		}
 
 	}
-	return true;
+
+	llvm::errs() << "on-end\n";
+	return false;
 }
 
 char xCallGraphPass::ID;

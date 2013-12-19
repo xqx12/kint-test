@@ -22,7 +22,7 @@ libsat_la_LIBADD   = -lboolector -llgl
 libsat_la_LDFLAGS  = -L$(top_builddir)/lib
 
 libintck_la_SOURCES = IntRewrite.cc IntLibcalls.cc IntSat.cc \
-	OverflowIdiom.cc OverflowSimplify.cc xCallGraph.cc\
+	OverflowIdiom.cc OverflowSimplify.cc xCallGraph.cc xCFG.cc \
 	LoadRewrite.cc
 libintck_la_LIBADD  = libsat.la
 libintck_la_LDFLAGS = -module
