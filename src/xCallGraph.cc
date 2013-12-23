@@ -46,6 +46,7 @@ private:
 //	void rewriteSize(Function *F);
 //	void rewriteSizeAt(CallInst *I, NamedParam *NPs);
 	void printCalledFuncPath(Function *srcFunc, Function *dstFunc);
+	void printCalledFuncAndCFGPath(Function *srcFunc, Function *dstFunc);
 };
 
 } // anonymous namespace
@@ -57,7 +58,10 @@ void xCallGraphPass::printCalledFuncPath(Function *srcFunc, Function *dstFunc){
 	ee = calledFunctionMap[dstFunc].end();
 	for( ; ii != ee; ++ii){
 		Function *FTmp = ii->first;
+		Instruction *ITmp = ii->second;
+
 		llvm::errs() << "\t" << FTmp->getName() << "-->" ;
+		llvm::errs() << "\n" << *ITmp <<"\n";
 		if( FTmp == dstFunc ){
 			llvm::errs() << "end. \na path found\n\n";
 			break;
@@ -69,6 +73,42 @@ void xCallGraphPass::printCalledFuncPath(Function *srcFunc, Function *dstFunc){
 	}
 	
 
+}
+
+void xCallGraphPass::printCalledFuncAndCFGPath(Function *srcFunc, Function *dstFunc){
+	CalledFunctions::iterator ii, ee;
+	ii = calledFunctionMap[srcFunc].begin();
+	ee = calledFunctionMap[dstFunc].end();
+	for( ; ii != ee; ++ii){
+		Function *FTmp = ii->first;
+		Instruction *ITmp = ii->second;
+
+		llvm::errs() << "\t" << FTmp->getName() << "-->" ;
+		llvm::errs() << "\n" << *ITmp <<"\n";
+
+		BasicBlock *curBB = ITmp->getParent();
+		pred_iterator i, e =  pred_end(curBB);
+		llvm::errs() << "\t\tCFG in :" << FTmp->getName() << "\n\t\t" << curBB->getName() << "->";
+		for (i = pred_begin(curBB); i != e; )
+		{
+
+			BasicBlock *bb = *i;
+			//bb->getName();
+			llvm::errs() << "\t" << bb->getName() << "->";
+			i = pred_begin(bb);
+
+		}
+		llvm::errs() << "\n\t\tCFG end\n" ;
+		if( FTmp == dstFunc ){
+			llvm::errs() << "end. \na path found\n\n";
+			break;
+		}
+		else
+		{
+			printCalledFuncAndCFGPath(FTmp, dstFunc);
+		}
+	}
+	
 }
 
 //bool xCallGraphPass::runOnModule(Module &M) {
@@ -187,7 +227,7 @@ bool xCallGraphPass::runOnModule(Module &M) {
 		//Function *FTmp = ii->first;
 		//llvm::errs() << "called by:" << FTmp->getName() << "\n" ;
 	//}
-	printCalledFuncPath(endFunc, startFunc);
+	printCalledFuncAndCFGPath(endFunc, startFunc);
 
 
 	llvm::errs() << "on-end\n";
