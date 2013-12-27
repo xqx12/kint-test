@@ -10,6 +10,8 @@
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/DebugInfo.h"
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 using namespace llvm;
 
@@ -30,6 +32,16 @@ struct xCallGraphPass : ModulePass {
 	typedef std::map<const Function *, CalledFunctions> FunctionMapTy;
 //	typedef std::map<const Function *, CallGraphNode * > FunctionMapTy;
 	FunctionMapTy  calledFunctionMap;
+	
+	typedef std::pair<const llvm::BasicBlock *, const llvm::BasicBlock *> Edge;
+	SmallVector<Edge, 32> BackEdges;
+	typedef llvm::SmallVectorImpl<Edge> EdgeVec;
+	//const EdgeVec &Backedges;
+
+	std::map<std::string,Constant*> SourceFiles;
+	Module* module;
+	llvm::LLVMContext* context;
+	Constant* constZero;
 
 	bool runOnModule(Module &);
 private:
@@ -47,9 +59,48 @@ private:
 //	void rewriteSizeAt(CallInst *I, NamedParam *NPs);
 	void printCalledFuncPath(Function *srcFunc, Function *dstFunc);
 	void printCalledFuncAndCFGPath(Function *srcFunc, Function *dstFunc);
+	Constant* getSourceFile(Instruction* I);
+	bool isBackEdge(llvm::BasicBlock *From, llvm::BasicBlock *To);
 };
 
 } // anonymous namespace
+
+bool xCallGraphPass::isBackEdge(llvm::BasicBlock *From, llvm::BasicBlock *To) {
+	return std::find(BackEdges.begin(), BackEdges.end(), Edge(From, To))
+		!= BackEdges.end();
+}
+//Constant* xCallGraphPass::getSourceFile(Instruction* I){
+
+	//StringRef File;
+	//if (MDNode *N = I->getMetadata("dbg")) {
+		//DILocation Loc(N);
+		//File = Loc.getFilename();
+	//} else {
+		//File = "Unknown Source File";
+	//}
+
+	//if (SourceFiles.count(File)) {
+		//return SourceFiles.find(File)->second;
+	//} else {
+
+		////Create a global variable with the File string
+		//Constant* stringConstant = llvm::ConstantArray::get(*context, File);
+		//GlobalVariable* sourceFileStr = new GlobalVariable(*module, stringConstant->getType(), true,
+														//llvm::GlobalValue::InternalLinkage,
+														//stringConstant, "SourceFile");
+
+		//constZero = ConstantInt::get(Type::getInt32Ty(*context), 0);
+
+		////Get the int8ptr to our message
+		//Constant* constArray = ConstantExpr::getInBoundsGetElementPtr(sourceFileStr, constZero);
+		//Constant* sourceFilePtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
+
+		//SourceFiles[File] = sourceFilePtr;
+
+		//return sourceFilePtr;
+	//}
+//}
+
 
 // print the called function
 void xCallGraphPass::printCalledFuncPath(Function *srcFunc, Function *dstFunc){
@@ -88,6 +139,13 @@ void xCallGraphPass::printCalledFuncAndCFGPath(Function *srcFunc, Function *dstF
 
 		BasicBlock *curBB = ITmp->getParent();
 		pred_iterator i, e =  pred_end(curBB);
+		
+		BackEdges.clear();
+		if( FTmp ){
+			FindFunctionBackedges(*FTmp, BackEdges);
+			//Backedges = &BackEdges;
+		}
+
 		llvm::errs() << "\t\tCFG in :" << FTmp->getName() << "\n\t\t" << curBB->getName() << "->";
 		for (i = pred_begin(curBB); i != e; )
 		{
@@ -96,7 +154,11 @@ void xCallGraphPass::printCalledFuncAndCFGPath(Function *srcFunc, Function *dstF
 			//bb->getName();
 			llvm::errs() << "\t" << bb->getName() << "->";
 			i = pred_begin(bb);
-
+			if(i!=e && isBackEdge(*i,bb))
+			{
+				continue;
+				//break;
+			}
 		}
 		llvm::errs() << "\n\t\tCFG end\n" ;
 		if( FTmp == dstFunc ){
