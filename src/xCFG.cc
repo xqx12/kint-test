@@ -119,14 +119,23 @@ bool xCFGPass::runOnFunction(Function &F) {
 	if( IIntOf == NULL ) return false;
 
 	BasicBlock *curBB = IIntOf->getParent();
+	llvm::errs() << "curbb:" << curBB->getName() << "\n\n";
 	pred_iterator i, e =  pred_end(curBB);
-	//llvm::errs() << "endbb:" << *e << "\n\n";
+//	BasicBlock *endBB = *e;
+	llvm::errs() << "curbb:" << curBB->getName() << "\n\n";
+//	llvm::errs() << "endbb:" << endBB->getName() << "\n\n";
 	for (i = pred_begin(curBB); i != e; )
 	{
 
 		BasicBlock *bb = *i;
 		//bb->getName();
-		llvm::errs() << bb->getName() << "\n\n";
+		llvm::errs() << "\n\n" <<  bb->getName() << "\n";
+		int count = 0;
+		for(pred_iterator itr=pred_begin(bb), ite=pred_end(bb); itr!=ite; itr++)
+		{
+			BasicBlock *bbtmp = *itr;
+			llvm::errs() << "pre_BBs" << ++count   << ":" << bbtmp->getName() << "\n";
+		}
 		i = pred_begin(bb);
 
 	}

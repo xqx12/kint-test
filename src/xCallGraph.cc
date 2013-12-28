@@ -48,12 +48,15 @@ private:
 	typedef IRBuilder<> BuilderTy;
 	BuilderTy *Builder;
 
+	DominatorTree *DT;
+
     void print(raw_ostream &O, const Module* = 0) const { }
 
     // getAnalysisUsage - This pass requires the CallGraph.
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
       AU.setPreservesAll();
       AU.addRequired<CallGraph>();
+      AU.addRequired<DominatorTree>();
     }
 //	void rewriteSize(Function *F);
 //	void rewriteSizeAt(CallInst *I, NamedParam *NPs);
@@ -65,10 +68,20 @@ private:
 
 } // anonymous namespace
 
+static BasicBlock *findCommonDominator(BasicBlock *BB, DominatorTree *DT) {
+	pred_iterator i = pred_begin(BB), e = pred_end(BB);
+	BasicBlock *Dom = *i;
+	for (++i; i != e; ++i)
+		Dom = DT->findNearestCommonDominator(Dom, *i);
+	return Dom;
+}
+
 bool xCallGraphPass::isBackEdge(llvm::BasicBlock *From, llvm::BasicBlock *To) {
 	return std::find(BackEdges.begin(), BackEdges.end(), Edge(From, To))
 		!= BackEdges.end();
 }
+
+
 //Constant* xCallGraphPass::getSourceFile(Instruction* I){
 
 	//StringRef File;
@@ -140,6 +153,7 @@ void xCallGraphPass::printCalledFuncAndCFGPath(Function *srcFunc, Function *dstF
 		BasicBlock *curBB = ITmp->getParent();
 		pred_iterator i, e =  pred_end(curBB);
 		
+		DT = &getAnalysis<DominatorTree>(*FTmp);
 		BackEdges.clear();
 		if( FTmp ){
 			FindFunctionBackedges(*FTmp, BackEdges);
@@ -156,7 +170,9 @@ void xCallGraphPass::printCalledFuncAndCFGPath(Function *srcFunc, Function *dstF
 			i = pred_begin(bb);
 			if(i!=e && isBackEdge(*i,bb))
 			{
-				continue;
+				bb = findCommonDominator(bb, DT);
+				llvm::errs() << "\tbk:" << bb->getName() << "->";
+				i = pred_begin(bb);
 				//break;
 			}
 		}
