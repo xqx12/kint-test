@@ -8,8 +8,14 @@
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/GraphWriter.h"
+#include <llvm/ADT/OwningPtr.h>
+
+#include "PathGen.h"
+#include "SMTSolver.h"
+#include "ValueGen.h"
 
 using namespace llvm;
+
 
 namespace {
 
@@ -25,12 +31,13 @@ struct xCFGPass : FunctionPass {
 //      initializexCFGPass(*PassRegistry::getPassRegistry());
 	}
 
-	//bool runOnModule(Module &);
+	bool runOnModule(Module &);
 	bool runOnFunction(Function &F); 
 
 private:
 	typedef IRBuilder<> BuilderTy;
 	BuilderTy *Builder;
+	OwningPtr<DataLayout> TD;
 
     void print(raw_ostream &O, const Module* = 0) const { }
 
@@ -79,7 +86,6 @@ private:
 	//return false;
 //}
 
-
 //bool xCFGPass::runOnFunction(Function &F) {
 	//std::string Filename = "cfg." + F.getName().str() + ".dot";
 	//errs() << "Writing '" << Filename << "'...";
@@ -124,6 +130,9 @@ bool xCFGPass::runOnFunction(Function &F) {
 //	BasicBlock *endBB = *e;
 	llvm::errs() << "curbb:" << curBB->getName() << "\n\n";
 //	llvm::errs() << "endbb:" << endBB->getName() << "\n\n";
+
+	
+	
 	for (i = pred_begin(curBB); i != e; )
 	{
 

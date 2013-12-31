@@ -12,6 +12,11 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/DebugInfo.h"
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
+#include <llvm/ADT/OwningPtr.h>
+
+#include "PathGen.h"
+#include "SMTSolver.h"
+#include "ValueGen.h"
 
 using namespace llvm;
 
@@ -49,8 +54,10 @@ private:
 	BuilderTy *Builder;
 
 	DominatorTree *DT;
+	OwningPtr<DataLayout> TD;
 
     void print(raw_ostream &O, const Module* = 0) const { }
+	void CollectPathConstraintsInFunction(Function *srcFunc, Function *dstFunc);
 
     // getAnalysisUsage - This pass requires the CallGraph.
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
@@ -189,6 +196,64 @@ void xCallGraphPass::printCalledFuncAndCFGPath(Function *srcFunc, Function *dstF
 	
 }
 
+void xCallGraphPass::CollectPathConstraintsInFunction(Function *srcFunc, Function *dstFunc){
+	CalledFunctions::iterator ii, ee;
+	ii = calledFunctionMap[srcFunc].begin();
+	ee = calledFunctionMap[dstFunc].end();
+
+	SMTSolver SMT(false);
+	ValueGen VG(*TD, SMT);
+	PathGen PG(VG, BackEdges);
+
+	for( ; ii != ee; ++ii){
+		if(!ii->first||!ii->second)
+			llvm::errs() << "ii error\n";
+		Function *FTmp = ii->first;
+		Instruction *ITmp = ii->second;
+
+		if(!FTmp)
+			llvm::errs() << "FTmp not found\n";
+		llvm::errs() << "\t" << FTmp->getName() << "-->" ;
+		if(!ITmp)
+			llvm::errs() << "ITmp not found\n";
+		llvm::errs() << "\n" << *ITmp <<"\n";
+
+		BasicBlock *curBB = ITmp->getParent();
+		pred_iterator i, e =  pred_end(curBB);
+		
+		DT = &getAnalysis<DominatorTree>(*FTmp);
+		BackEdges.clear();
+		if( FTmp ){
+			FindFunctionBackedges(*FTmp, BackEdges);
+			//Backedges = &BackEdges;
+		}
+
+		llvm::errs() << "\t\tCFG in :" << FTmp->getName() << "\n\t\t" << curBB->getName() << "->";
+		for (i = pred_begin(curBB); i != e; )
+		{
+
+			BasicBlock *preBB = *i;
+			//bb->getName();
+
+			llvm::errs() << "\t" << preBB->getName() << "->\n";
+			if(i!=e && !isBackEdge(preBB,curBB)){
+				SMTExpr Term = PG.getTermGuard(preBB->getTerminator(), curBB);
+				SMT.decref(Term);
+				SMT.dump(Term);
+			}
+			curBB = preBB;
+			i = pred_begin(preBB);
+
+		}
+		if( FTmp == dstFunc ){
+			llvm::errs() << "end. \na path found\n\n";
+			break;
+		}
+		llvm::errs() << "\n\t\tCFG end\n" ;
+	}
+
+}
+
 //bool xCallGraphPass::runOnModule(Module &M) {
 	//unsigned sccNum = 0;
 	//llvm::errs() << "SCC-CG in runOnModule\n";
@@ -215,6 +280,7 @@ void xCallGraphPass::printCalledFuncAndCFGPath(Function *srcFunc, Function *dstF
 
 bool xCallGraphPass::runOnModule(Module &M) {
 	CallGraph &CG = getAnalysis<CallGraph>();
+	TD.reset(new DataLayout(&M));
 //	CG.dump();
 //	CG.viewGraph();
 //	DominatorTreeBase<CallGraphNode> *DTB;
@@ -305,8 +371,9 @@ bool xCallGraphPass::runOnModule(Module &M) {
 		//Function *FTmp = ii->first;
 		//llvm::errs() << "called by:" << FTmp->getName() << "\n" ;
 	//}
-	printCalledFuncAndCFGPath(endFunc, startFunc);
 
+//	printCalledFuncAndCFGPath(endFunc, startFunc);
+	CollectPathConstraintsInFunction(endFunc, startFunc);
 
 	llvm::errs() << "on-end\n";
 	return false;

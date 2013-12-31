@@ -26,6 +26,7 @@ public:
 	~PathGen();
 
 	SMTExpr get(llvm::BasicBlock *);
+	SMTExpr getTermGuard(llvm::TerminatorInst *I, llvm::BasicBlock *BB);
 
 private:
 	ValueGen &VG;
@@ -34,7 +35,6 @@ private:
 	BBExprMap Cache;
 
 	bool isBackedge(llvm::BasicBlock *, llvm::BasicBlock *);
-	SMTExpr getTermGuard(llvm::TerminatorInst *I, llvm::BasicBlock *BB);
 	SMTExpr getTermGuard(llvm::BranchInst *I, llvm::BasicBlock *BB);
 	SMTExpr getTermGuard(llvm::SwitchInst *I, llvm::BasicBlock *BB);
 	SMTExpr getPHIGuard(llvm::BasicBlock *BB, llvm::BasicBlock *Pred);

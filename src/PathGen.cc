@@ -55,6 +55,10 @@ SMTExpr PathGen::get(BasicBlock *BB) {
 		if (!DT && isBackedge(Pred, BB))
 			continue;
 		SMTExpr Term = getTermGuard(Pred->getTerminator(), BB);
+		llvm::errs() << "getTermGuard:\n" ;
+		SMT.dump(Term);
+		llvm::errs() << "getTermGuard---end\n" ;
+
 		SMTExpr PN = getPHIGuard(BB, Pred);
 		SMTExpr TermWithPN = SMT.bvand(Term, PN);
 		SMT.decref(Term);
@@ -121,6 +125,8 @@ SMTExpr PathGen::getTermGuard(BranchInst *I, BasicBlock *BB) {
 	SMT.incref(E);
 	// True or false branch.
 	if (I->getSuccessor(0) != BB) {
+		llvm::errs() << "getSuccessor(1)=" << I->getSuccessor(1)->getName() << "\n";
+		llvm::errs() << "BB)=" << BB->getName() << "\n";
 		assert(I->getSuccessor(1) == BB);
 		SMTExpr Tmp = SMT.bvnot(E);
 		SMT.decref(E);
