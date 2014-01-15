@@ -41,15 +41,17 @@ DescSet * TaintPass::getTaint(Value *V) {
 	OS << "getTaint: " ;
 	V->dump();
 	if (DescSet *DS = TM.get(V)){
-		OS << "TM get OK: \n" ;
+		OS << "\tTM get V OK: \n" ;
 		return DS;
 	}
 
 	OS << "stripPointerCasts: " ;
 	V->stripPointerCasts()->dump();
 
-	if (DescSet *DS = TM.get(V->stripPointerCasts()))
+	if (DescSet *DS = TM.get(V->stripPointerCasts())){
+		OS << "\tTM get V->stripPointerCasts() OK: \n" ;
 		return DS;
+	}
 	if ( V != V->stripPointerCasts()){
 		V->dump();
 		V->stripPointerCasts()->dump();
@@ -63,14 +65,20 @@ DescSet * TaintPass::getTaint(Value *V) {
 			FuncSet &CEEs = Ctx->Callees[CI];
 			for (FuncSet::iterator i = CEEs.begin(), e = CEEs.end();
 				 i != e; ++i) {
-				if (DescSet *DS = TM.get(getRetId(*i)))
+				if (DescSet *DS = TM.get(getRetId(*i))){
+					OS << "\tTM get getRetId OK:" << getRetId(*i) << " \n" ;
 					TM.add(CI, *DS);
+					TM.xadd(V, *( TM.xget(getRetId(*i))));
+				}
 			}
 		}
 	}
 	// For arguments and loads
-	if (DescSet *DS = TM.get(getValueId(V)))
+	if (DescSet *DS = TM.get(getValueId(V))){
+		OS << "\tTM get getValueId OK:" << getValueId(V) << " \n" ;
 		TM.add(V, *DS);
+		TM.xadd(V, *(TM.xget(getValueId(V)))); 
+	}
 	return TM.get(V);
 }
 
@@ -88,9 +96,11 @@ bool TaintPass::checkTaintSource(Instruction *I)
 
 	if (MDNode *MD = I->getMetadata(MD_TaintSrc)) {
 		TM.add(I, asString(MD));
+		TM.xadd(I,  NULL);
 		DescSet &D = *TM.get(I);
 		//dumpDesc(&D);
 		changed |= TM.add(getValueId(I), D, true);
+		TM.xadd(getValueId(I), NULL);
 		//addbyxqx201401
 		OS << "checkTaintSource: \n" << "getVualeID(I)=" << getValueId(I) << "\n";
 		OS << "asSting(MD): " << asString(MD) << "\n";
@@ -129,7 +139,7 @@ bool TaintPass::runOnFunction(Function *F)
 		// find and mark taint sources
 		OS << "\t====instuction======\n";
 		I->dump();
-		backtrace(I);
+		//backtrace(I);
 		OS << "\n" ;
 		changed |= checkTaintSource(I);
 
@@ -165,6 +175,7 @@ bool TaintPass::runOnFunction(Function *F)
 						CI->getArgOperand(a)->dump();
 						OS << "getArgId(*j,a) = " << getArgId(*j,a) << "\n";
 						changed |= TM.add(getArgId(*j, a), *DS);
+						TM.xadd(getArgId(*j, a), CI);
 					}
 				}
 			}
@@ -173,23 +184,29 @@ bool TaintPass::runOnFunction(Function *F)
 
 		// check if any operand is taint
 		DescSet D;
+		ValueSet pV;
 		for (unsigned j = 0; j < I->getNumOperands(); ++j)
 			if (DescSet *DS = getTaint(I->getOperand(j))){
 				OS << "I->getOperand(" << j << "):\n" ;
 				I->getOperand(j)->dump();
 				D.insert(DS->begin(), DS->end());
+				//addbyxqx201401
+				pV.insert(I->getOperand(j));
 			}
 		if (D.empty())
 			continue;
 
 		// propagate value and global taint
 		TM.add(I, D);
+		TM.xadd(I, pV);
 		if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
 			if (MDNode *ID = SI->getMetadata(MD_ID)){
 				changed |= TM.add(asString(ID), D);
+				TM.xadd(asString(ID), SI);
 			}
 		} else if (isa<ReturnInst>(I)) {
 			changed |= TM.add(getRetId(F), D);
+			TM.xadd(getRetId(F), I);
 			OS << "returnInst:" << getRetId(F) << "\n";
 		}
 
@@ -216,13 +233,24 @@ bool TaintPass::doFinalization(Module *M) {
 			if (DescSet *DS = getTaint(I)) {
 				MDNode *MD = MDNode::get(VMCtx, toMDString(VMCtx, DS));
 				I->setMetadata(MD_Taint, MD);
+				//addbyxqx201401
+				//ValueSet *VS = TM.xget(I);
+				//if ( VS ) {
+					////ArraySet ArrayValue(VS, VS->size());
+					////std::vector<llvm::Value*> vec;
+					//Value *RL[2]  ;
+					//int count = 0;
+					//for( ValueSet::iterator jj = VS->begin(),
+							//jee = VS->end(); jj != jee; ++jj) {
+						////vec.push_back(*jj);
+						//RL[count++] = *jj ;
+					//}
+					//MDNode *MDTP = MDNode::get(VMCtx, RL);
+					//I->setMetadata("TP" , MDTP);
+				//}
 			} else
 			{
-				//OS << "before setMetadata------\n";
-				//I->dump();
 				I->setMetadata(MD_Taint, NULL);
-				//OS << "after setMetadata------\n";
-				//I->dump();
 			}
 		}
 		OS << "taintpass: after propagrate----\n";
@@ -281,6 +309,17 @@ void TaintPass::dumpValueMap() {
 				OS << *j << " ";
 		OS << "\n";
 	}
+	OS << "\t\t-------------------------\n"; 
+	for (TaintMap::TaintParents::iterator ii = TM.VTP.begin(),
+			ee = TM.VTP.end(); ii != ee; ++ii) {
+		OS << *(ii->first) << ":$: \n" ;
+		for( ValueSet::iterator jj = ii->second.begin(),
+				jee = ii->second.end(); jj != jee; ++jj) {
+			OS << "\t\t" << *(*jj) << "\n" ;
+		}
+		OS << "\n";
+	}
+
 	OS << "\t\t-------dumpValueMap-------end\n\n"; 
 }
 void TaintPass::dumpDesc( DescSet *D) {
