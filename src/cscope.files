@@ -3,6 +3,7 @@
 ./Annotation.cc
 ./CmpSat.cc
 ./ValueGen.cc
+./xCFG.cc
 ./PathGen.cc
 ./llvm/IRBuilder.h
 ./llvm/DebugInfo.h
@@ -31,3 +32,4 @@
 ./OverflowIdiom.cc
 ./Range.cc
 ./IntRewrite.cc
+./xCallGraph.cc

@@ -11,6 +11,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/Transforms/Utils/Local.h>
+#include <llvm/DebugInfo.h>
 
 #include "Annotation.h"
 
@@ -18,8 +19,17 @@ using namespace llvm;
 
 
 static inline bool needAnnotation(Value *V) {
+	//raw_ostream &OS = dbgs();
+	//OS << "needAnnotation:\n";
 	if (PointerType *PTy = dyn_cast<PointerType>(V->getType())) {
 		Type *Ty = PTy->getElementType();
+		//OS << "Ty:\n";
+		//Ty->dump();
+		//bool ret = (Ty->isIntegerTy() || isFunctionPointer(Ty));
+		//if(ret)
+			//OS << "\nTyi--1\n" <<  "\n";
+		//else
+			//OS << "\nTyi-0-\n" <<  "\n";
 		return (Ty->isIntegerTy() || isFunctionPointer(Ty));
 	}
 	return false;
@@ -63,21 +73,33 @@ static bool annotateLoadStore(Instruction *I) {
 	std::string Anno;
 	LLVMContext &VMCtx = I->getContext();
 	Module *M = I->getParent()->getParent()->getParent();
+	//addbyxqx201401
+	//I->dump();
+	//raw_ostream &OS = dbgs();
 
 	if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
+		//OS << "annotateLoadStore-Load:" << "\n";
 		llvm::Value *V = LI->getPointerOperand();
-		if (needAnnotation(V))
+		//V->dump();
+		if (needAnnotation(V)){
 			Anno = getAnnotation(V, M);
+			//OS << Anno << "\n";
+		}
 	} else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
+		//OS << "annotateLoadStore-Load:" << "\n";
 		Value *V = SI->getPointerOperand();
-		if (needAnnotation(V))
+		//V->dump();
+		if (needAnnotation(V)){
 			Anno = getAnnotation(V, M);
+			//OS << Anno << "\n";
+		}
 	}
 
 	if (Anno.empty())
 		return false;
 
 	MDNode *MD = MDNode::get(VMCtx, MDString::get(VMCtx, Anno));
+	//MD->dump();
 	I->setMetadata(MD_ID, MD);
 	return true;
 }
@@ -85,6 +107,8 @@ static bool annotateLoadStore(Instruction *I) {
 static bool annotateArguments(Function &F) {
 	bool Changed = false;
 	LLVMContext &VMCtx = F.getContext();
+	//addbyxqx201312
+	raw_ostream &OS = dbgs();
 
 	// replace integer arguments with function calls
 	for (Function::arg_iterator i = F.arg_begin(),
@@ -100,11 +124,18 @@ static bool annotateArguments(Function &F) {
 		std::string Name = "kint_arg.i" + Twine(Ty->getBitWidth()).str();
 		Function *AF = cast<Function>(
 			F.getParent()->getOrInsertFunction(Name, Ty, NULL));
+		OS << "annotateArg-Func:" << "\n";
+		AF->dump();
+
 		CallInst *CI = IntrinsicInst::Create(AF, A->getName(), 
 			F.getEntryBlock().getFirstInsertionPt());
+		OS << "annotateArg-CI:" << "\n";
+		CI->dump();
 
 		MDNode *MD = MDNode::get(VMCtx, MDString::get(VMCtx, getArgId(A)));
 		CI->setMetadata(MD_ID, MD);
+		OS << "annotateArg-MD:" << "\n";
+		MD->dump();
 		A->replaceAllUsesWith(CI);
 		Changed = true;
 	}
@@ -140,14 +171,24 @@ static bool annotateTaintSource(CallInst *CI,
 	
 	// other taint sources: int __kint_taint(const char *, ...);
 	if (Name == "__kint_taint") {
+		//addbyxqx201401
+		//raw_ostream &OS = dbgs();
+		//OS << "find kint_taint:" << "\n";
 		// the 1st arg is the description
 		StringRef Desc = extractConstantString(CI->getArgOperand(0));
+		//OS << Desc << "\n";
 		// the 2nd arg and return value are tainted
 		MDNode *MD = MDNode::get(VMCtx, MDString::get(VMCtx, Desc));
-		if (Instruction *I = dyn_cast_or_null<Instruction>(CI->getArgOperand(1)))
+		//OS << *MD << "\n";
+		//CI->dump();
+		if (Instruction *I = dyn_cast_or_null<Instruction>(CI->getArgOperand(1))){
+			//I->dump();
 			I->setMetadata(MD_TaintSrc, MD);
-		if (!CI->use_empty())
+		}
+		if (!CI->use_empty()){
+			//OS << MD_TaintSrc << "\n";
 			CI->setMetadata(MD_TaintSrc, MD);
+		}
 		else
 			Erase.insert(CI);
 		return true;
@@ -180,6 +221,12 @@ static bool annotateSink(CallInst *CI) {
 
 	LLVMContext &VMCtx = CI->getContext();
 	StringRef Name = CI->getCalledFunction()->getName();
+	
+	//addbyxqx201401
+	raw_ostream &OS = dbgs();
+	OS << "annotateSink: \n";
+	CI->dump();
+	OS << "GetCalledFunc:" << Name << "\n";
 
 	for (unsigned i = 0; i < sizeof(Allocs) / sizeof(Allocs[0]); ++i) {
 		if (Name == Allocs[i].first) {
@@ -187,6 +234,8 @@ static bool annotateSink(CallInst *CI) {
 			if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
 				MDNode *MD = MDNode::get(VMCtx, MDString::get(VMCtx, Name));
 				I->setMetadata(MD_Sink, MD);
+				OS << "SetMetadata:\n" ;
+				MD->dump();
 				return true;
 			}
 		}

@@ -35,10 +35,26 @@ static inline MDString *toMDString(LLVMContext &VMCtx, DescSet *D) {
 
 // Check both local taint and global sources
 DescSet * TaintPass::getTaint(Value *V) {
-	if (DescSet *DS = TM.get(V))
+	
+	dumpValueMap();
+	raw_ostream &OS = dbgs();
+	OS << "getTaint: " ;
+	V->dump();
+	if (DescSet *DS = TM.get(V)){
+		OS << "TM get OK: \n" ;
 		return DS;
+	}
+
+	OS << "stripPointerCasts: " ;
+	V->stripPointerCasts()->dump();
+
 	if (DescSet *DS = TM.get(V->stripPointerCasts()))
 		return DS;
+	if ( V != V->stripPointerCasts()){
+		V->dump();
+		V->stripPointerCasts()->dump();
+		assert(0&&"find stripPointerCasts diff");
+	}
 	
 	// if value is not taint, check global taint.
 	// For call, taint if any possible callee could return taint
@@ -67,16 +83,29 @@ bool TaintPass::checkTaintSource(Instruction *I)
 {
 	Module *M = I->getParent()->getParent()->getParent();
 	bool changed = false;
+	//addbyxqx201401
+	raw_ostream &OS = dbgs();
 
 	if (MDNode *MD = I->getMetadata(MD_TaintSrc)) {
 		TM.add(I, asString(MD));
 		DescSet &D = *TM.get(I);
+		//dumpDesc(&D);
 		changed |= TM.add(getValueId(I), D, true);
+		//addbyxqx201401
+		OS << "checkTaintSource: \n" << "getVualeID(I)=" << getValueId(I) << "\n";
+		OS << "asSting(MD): " << asString(MD) << "\n";
+		OS << "Inst: \n";
+		I->dump();
+		OS << "MD: \n";
+		MD->dump();
+		//D.dump();
 		// mark all struct members as taint
 		if (PointerType *PTy = dyn_cast<PointerType>(I->getType())) {
 			if (StructType *STy = dyn_cast<StructType>(PTy->getElementType())) {
-				for (unsigned i = 0; i < STy->getNumElements(); ++i)
+				for (unsigned i = 0; i < STy->getNumElements(); ++i){
 					changed |= TM.add(getStructId(STy, M, i), D, true);
+					OS << "getStructId= " << getStructId(STy,M,i) << "\n";
+				}
 			}
 		}
 	}
@@ -88,21 +117,42 @@ bool TaintPass::runOnFunction(Function *F)
 {
 	bool changed = false;
 
+	raw_ostream &OS = dbgs();
+	OS << "TP::runOnFunc:" << F->getName() << "\n";
+	OS << "----------Function Bady-----------------\n";
+	F->dump();
+	OS << "----------Function end-----------------\n\n\n";
+
 	for (inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i) {
 		Instruction *I = &*i;
 		
 		// find and mark taint sources
+		OS << "\t====instuction======\n";
+		I->dump();
+		backtrace(I);
+		OS << "\n" ;
 		changed |= checkTaintSource(I);
 
 		// for call instruction, propagate taint to arguments instead
 		// of from arguments
 		if (CallInst *CI = dyn_cast<CallInst>(I)) {
-			if (CI->isInlineAsm() || !Ctx->Callees.count(CI))
+			//if (CI->isInlineAsm() || !Ctx->Callees.count(CI))
+				//continue;
+			if (CI->isInlineAsm() ){
+				OS << "\tthis is InlineAsm call\n" ;
 				continue;
+			}
+			OS << "\tthis callee count is:" << Ctx->Callees.count(CI)<<"\n" ;
+			if ( !Ctx->Callees.count(CI)){
+				OS << "\tthis callee count is:" << Ctx->Callees.count(CI)<<"\n" ;
+				continue;
+			}
 
 			FuncSet &CEEs = Ctx->Callees[CI];
 			for (FuncSet::iterator j = CEEs.begin(), je = CEEs.end();
 				 j != je; ++j) {
+
+				OS << "\tcallees:" << (*j)->getName() << "\n";
 				// skip vaarg and builtin functions
 				if ((*j)->isVarArg() 
 					|| (*j)->getName().find('.') != StringRef::npos)
@@ -110,8 +160,12 @@ bool TaintPass::runOnFunction(Function *F)
 				
 				// mark corresponding args tainted on all possible callees
 				for (unsigned a = 0; a < CI->getNumArgOperands(); ++a) {
-					if (DescSet *DS = getTaint(CI->getArgOperand(a)))
+					if (DescSet *DS = getTaint(CI->getArgOperand(a))){
+						OS << "CI operands is tainted, num = " << a << "\n";
+						CI->getArgOperand(a)->dump();
+						OS << "getArgId(*j,a) = " << getArgId(*j,a) << "\n";
 						changed |= TM.add(getArgId(*j, a), *DS);
+					}
 				}
 			}
 			continue;
@@ -120,20 +174,31 @@ bool TaintPass::runOnFunction(Function *F)
 		// check if any operand is taint
 		DescSet D;
 		for (unsigned j = 0; j < I->getNumOperands(); ++j)
-			if (DescSet *DS = getTaint(I->getOperand(j)))
+			if (DescSet *DS = getTaint(I->getOperand(j))){
+				OS << "I->getOperand(" << j << "):\n" ;
+				I->getOperand(j)->dump();
 				D.insert(DS->begin(), DS->end());
+			}
 		if (D.empty())
 			continue;
 
 		// propagate value and global taint
 		TM.add(I, D);
 		if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-			if (MDNode *ID = SI->getMetadata(MD_ID))
+			if (MDNode *ID = SI->getMetadata(MD_ID)){
 				changed |= TM.add(asString(ID), D);
+			}
 		} else if (isa<ReturnInst>(I)) {
 			changed |= TM.add(getRetId(F), D);
+			OS << "returnInst:" << getRetId(F) << "\n";
 		}
+
+		OS << "\t====instuction======end\n\n";
 	}
+	OS << "\t++++++++TM status:+++++++++ \n" ;
+	dumpTaints();
+	OS << "\t++++++++TM status:+++++++++end \n\n" ;
+	OS << "TP::runOnFunc:" << F->getName() << "--------------\n";
 	return changed;
 }
 
@@ -142,27 +207,53 @@ bool TaintPass::doFinalization(Module *M) {
 	LLVMContext &VMCtx = M->getContext();
 	for (Module::iterator f = M->begin(), fe = M->end(); f != fe; ++f) {
 		Function *F = &*f;
+		
+		raw_ostream &OS = dbgs();
+		OS << "taintpass: ----\n";
+		OS << *F  << "\n";
 		for (inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i) {
 			Instruction *I = &*i;
 			if (DescSet *DS = getTaint(I)) {
 				MDNode *MD = MDNode::get(VMCtx, toMDString(VMCtx, DS));
 				I->setMetadata(MD_Taint, MD);
 			} else
+			{
+				//OS << "before setMetadata------\n";
+				//I->dump();
 				I->setMetadata(MD_Taint, NULL);
+				//OS << "after setMetadata------\n";
+				//I->dump();
+			}
 		}
+		OS << "taintpass: after propagrate----\n";
+		OS << *F  << "\n";
 	}
 	return true;
 }
 
 bool TaintPass::doModulePass(Module *M) {
 	bool changed = true, ret = false;
+	int count = 0;
+	raw_ostream &OS = dbgs();
+	OS << "TaintPass::doModulePass----------------------\n";
 
 	while (changed) {
 		changed = false;
-		for (Module::iterator i = M->begin(), e = M->end(); i != e; ++i)
+		for (Module::iterator i = M->begin(), e = M->end(); i != e; ++i){
+			Function *F = &*i;
+			OS  << "Function" << count++ << ":" << F->getName() << " \n";
+			
 			changed |= runOnFunction(&*i);
+			if (changed)
+				OS << "changed = true\n" ;
+			else 
+				OS << "changed = false\n" ;
+			
+		}
 		ret |= changed;
 	}
+
+	OS << "TaintPass::doModulePass++++++++++++++++++++end-\n";
 	return ret;
 }
 
@@ -171,7 +262,7 @@ void TaintPass::dumpTaints() {
 	raw_ostream &OS = dbgs();
 	for (TaintMap::GlobalMap::iterator i = TM.GTS.begin(), 
 		 e = TM.GTS.end(); i != e; ++i) {
-		OS << (i->second.second ? "S " : "  ") << i->first << "\t";
+		OS << (i->second.second ? "\t+S " : "\t+  ") << i->first << "\t";
 		for (DescSet::iterator j = i->second.first.begin(),
 			je = i->second.first.end(); j != je; ++j)
 				OS << *j << " ";
@@ -179,4 +270,58 @@ void TaintPass::dumpTaints() {
 	}
 }
 
+void TaintPass::dumpValueMap() {
+	raw_ostream &OS = dbgs();
+	OS << "\t\t-------dumpValueMap\n"; 
+	for (TaintMap::ValueMap::iterator i = TM.VTS.begin(), 
+		 e = TM.VTS.end(); i != e; ++i) {
+		OS << *(i->first) << ":#: " ;
+		for (DescSet::iterator j = i->second.begin(),
+			je = i->second.end(); j != je; ++j)
+				OS << *j << " ";
+		OS << "\n";
+	}
+	OS << "\t\t-------dumpValueMap-------end\n\n"; 
+}
+void TaintPass::dumpDesc( DescSet *D) {
+	raw_ostream &OS = dbgs();
+	std::string s;
+	for (DescSet::iterator i = D->begin(), e = D->end(); i != e; ++i) {
+		if (i != D->begin())
+			s += ", ";
+		s += (*i).str();
+	}
+	OS << "DumpDesc:\n" << s << "\n";
+}
+
+static void getPath(SmallVectorImpl<char> &Path, const MDNode *MD) {
+	StringRef Filename = DIScope(MD).getFilename();
+	if (sys::path::is_absolute(Filename))
+		Path.append(Filename.begin(), Filename.end());
+	else
+		sys::path::append(Path, DIScope(MD).getDirectory(), Filename);
+}
+
+void TaintPass::backtrace(Instruction *I) {
+	raw_ostream &OS = dbgs();
+	const char *Prefix = " - ";
+	MDNode *MD = I->getDebugLoc().getAsMDNode(I->getContext());
+	OS << "--backtrace:\n";
+	MD->dump();
+	OS << "--backtrace----end\n";
+	if (!MD)
+		return;
+	OS << "stack: \n";
+	DILocation Loc(MD);
+	for (;;) {
+		SmallString<64> Path;
+		getPath(Path, Loc.getScope());
+		OS << Prefix << Path
+		   << ':' << Loc.getLineNumber()
+		   << ':' << Loc.getColumnNumber() << '\n';
+		Loc = Loc.getOrigLocation();
+		if (!Loc.Verify())
+			break;
+	}
+}
 #undef TM

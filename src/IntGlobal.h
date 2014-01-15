@@ -161,6 +161,9 @@ public:
 
 	// debug
 	void dumpTaints();
+	void dumpDesc( DescSet *D) ;
+	void dumpValueMap(); 
+	void backtrace(llvm::Instruction *I); 
 };
 
 
