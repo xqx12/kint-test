@@ -231,6 +231,9 @@ public:
 	void dumpDesc( DescSet *D) ;
 	void dumpValueMap(); 
 	void backtrace(llvm::Instruction *I); 
+	void dumpTSinkPath();
+	void dumpValueByPath(ValueSet VS, int depth);
+	void getSrcbyInst(Instruction *I); 
 };
 
 

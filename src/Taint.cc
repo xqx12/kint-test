@@ -175,7 +175,7 @@ bool TaintPass::runOnFunction(Function *F)
 						CI->getArgOperand(a)->dump();
 						OS << "getArgId(*j,a) = " << getArgId(*j,a) << "\n";
 						changed |= TM.add(getArgId(*j, a), *DS);
-						TM.xadd(getArgId(*j, a), CI);
+						TM.xadd(getArgId(*j, a), CI->getArgOperand(a));
 					}
 				}
 			}
@@ -222,10 +222,11 @@ bool TaintPass::runOnFunction(Function *F)
 // write back
 bool TaintPass::doFinalization(Module *M) {
 	LLVMContext &VMCtx = M->getContext();
+	raw_ostream &OS = dbgs();
+
 	for (Module::iterator f = M->begin(), fe = M->end(); f != fe; ++f) {
 		Function *F = &*f;
 		
-		raw_ostream &OS = dbgs();
 		OS << "taintpass: ----\n";
 		OS << *F  << "\n";
 		for (inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i) {
@@ -256,6 +257,8 @@ bool TaintPass::doFinalization(Module *M) {
 		OS << "taintpass: after propagrate----\n";
 		OS << *F  << "\n";
 	}
+	OS << "[[[[[[[[[[[dumptaint info]]]]]]]]]]]\n" ;
+	dumpTSinkPath();
 	return true;
 }
 
@@ -322,6 +325,62 @@ void TaintPass::dumpValueMap() {
 
 	OS << "\t\t-------dumpValueMap-------end\n\n"; 
 }
+
+void TaintPass::dumpTSinkPath()
+{
+	raw_ostream &OS = dbgs();
+
+	for (TaintMap::TaintParents::iterator i = TM.VTP.begin(),
+			e = TM.VTP.end(); i != e; ++i) {
+		Instruction *I = dyn_cast<Instruction>(i->first);
+		if (!I)
+			return;
+
+		if ( I->getMetadata("sink")){
+			int d = 0;
+			OS << "sink:" << *I << ":::";
+			getSrcbyInst(I) ;
+			OS << "\n" ;
+			dumpValueByPath(i->second, d);
+
+		}
+	}
+
+}
+void TaintPass::dumpValueByPath(ValueSet VS, int depth)
+{
+	if (VS.empty()) 
+		return;
+
+	raw_ostream &OS = dbgs();
+	for (ValueSet::iterator i = VS.begin(),e = VS.end();
+			i != e; i++) {
+		for( int j=0; j<depth; j++){
+			OS << "\t" ;
+		}
+		if (*i == NULL) {
+			OS << "tanit src\n" ;
+			break;
+		}
+		Instruction *I = dyn_cast<Instruction>(*i);
+		if (!I) break;
+		OS << *(*i) << ":::" ;
+		getSrcbyInst(I) ;
+		OS << "\n";
+//		}
+//		else{
+//			OS << "taint src\n" ;
+//			break;
+//		}
+
+		ValueSet VS_TMP;
+		VS_TMP = TM.VTP[*i];
+		dumpValueByPath(VS_TMP, ++depth);
+	}
+
+
+}
+
 void TaintPass::dumpDesc( DescSet *D) {
 	raw_ostream &OS = dbgs();
 	std::string s;
@@ -362,5 +421,20 @@ void TaintPass::backtrace(Instruction *I) {
 		if (!Loc.Verify())
 			break;
 	}
+}
+
+void TaintPass::getSrcbyInst(Instruction *I) {
+	raw_ostream &OS = dbgs();
+	const char *Prefix = " - ";
+	MDNode *MD = I->getDebugLoc().getAsMDNode(I->getContext());
+	if (!MD)
+		return;
+	DILocation Loc(MD);
+
+	SmallString<64> Path;
+	getPath(Path, Loc.getScope());
+	OS << Prefix << Path
+		<< ':' << Loc.getLineNumber()
+		<< ':' << Loc.getColumnNumber() << '\n';
 }
 #undef TM
