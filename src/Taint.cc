@@ -9,6 +9,7 @@
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/InstIterator.h>
 #include <llvm/Analysis/CallGraph.h>
+//#include <llvm/Analysis/DbgInfoPrinter.h>
 
 #include "Annotation.h"
 #include "IntGlobal.h"
@@ -437,4 +438,26 @@ void TaintPass::getSrcbyInst(Instruction *I) {
 		<< ':' << Loc.getLineNumber()
 		<< ':' << Loc.getColumnNumber() << '\n';
 }
+//void TaintPass::getSrcbyInst(Instruction *I) {
+	//raw_ostream &OS = dbgs();
+	//const char *Prefix = " - ";
+	//bool bRet;
+	//std::string DisplayName,Type,FileName,FileDir;
+	//unsigned LineNo;
+	//bRet = getLocationInfo(I,DisplayName, Type, LineNo,
+			//FileName, FileDir);
+	//if(bRet)
+		//OS << FileDir << "/" << FileName << ":" << LineNo << "::" << DisplayName
+			//<< "," << Type << "\n" ;
+	//else
+		//OS << "not get the source location \n" ;
+//}
 #undef TM
+
+
+
+
+
+
+
+

@@ -2,13 +2,14 @@ AM_CXXFLAGS = `llvm-config --cxxflags` -Werror -Wall -O0 -g
 
 noinst_LTLIBRARIES = libsat.la
 lib_LTLIBRARIES    = libintck.la libcmpck.la
-bin_PROGRAMS       = intglobal
+bin_PROGRAMS       = intglobal pathanalysis
 EXTRA_DIST         = intck cmpck llvm/DataLayout.h llvm/DebugInfo.h llvm/IRBuilder.h
 
 all-local: libintck.la libcmpck.la
 	@cd $(top_builddir)/lib && $(LN_S) -f ../src/.libs/libintck.so
 	@cd $(top_builddir)/lib && $(LN_S) -f ../src/.libs/libcmpck.so
 	@cd $(top_builddir)/bin && $(LN_S) -f ../src/intglobal
+	@cd $(top_builddir)/bin && $(LN_S) -f ../src/pathanalysis
 
 libsat_la_CPPFLAGS = -I$(top_builddir)/lib
 libsat_la_SOURCES  = ValueGen.cc PathGen.cc Diagnostic.cc SMTSolver.cc
@@ -34,3 +35,8 @@ libcmpck_la_LDFLAGS = -module
 intglobal_LDFLAGS = `llvm-config --ldflags` -lLLVM-`llvm-config --version`
 intglobal_SOURCES = IntGlobal.cc Annotation.cc CallGraph.cc Taint.cc Range.cc \
 	IntGlobal.h Annotation.h CRange.h
+
+pathanalysis_CPPFLAGS = -I/usr/include/libxml2
+pathanalysis_LDFLAGS = `llvm-config --ldflags` -lLLVM-`llvm-config --version` -lxml2 
+pathanalysis_SOURCES = PathAnalysis.cc CallGraphCFG.cc Annotation.cc CallGraph.cc Taint.cc Range.cc \
+	PathAnalysis.h Annotation.h CRange.h
