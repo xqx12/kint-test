@@ -38,5 +38,5 @@ intglobal_SOURCES = IntGlobal.cc Annotation.cc CallGraph.cc Taint.cc Range.cc \
 
 pathanalysis_CPPFLAGS = -I/usr/include/libxml2
 pathanalysis_LDFLAGS = `llvm-config --ldflags` -lLLVM-`llvm-config --version` -lxml2 
-pathanalysis_SOURCES = PathAnalysis.cc CallGraphCFG.cc Annotation.cc CallGraph.cc Taint.cc Range.cc \
-	PathAnalysis.h Annotation.h CRange.h
+pathanalysis_SOURCES = PathAnalysis.cc PathAnno.cc  \
+	PathAnalysis.h PathAnno.h 

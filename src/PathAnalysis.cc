@@ -1,22 +1,24 @@
+/*
+* Filename: PathAnalysis.cc
+* Last modified: 2014-01-28 20:00
+* Author: Qixue Xiao <xiaoqixue_1@163.com>
+* Description: 
+*/
+
 #include "llvm/LLVMContext.h"
-#include "llvm/PassManager.h"
 #include "llvm/Module.h"
-#include "llvm/Analysis/Verifier.h"
-#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Module.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/IRReader.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Path.h"
-#include <memory>
-#include <vector>
 
 #include "PathAnalysis.h"
 //#include "IntGlobal.h"
-#include "Annotation.h"
+//#include "Annotation.h"
 
 using namespace llvm;
 
@@ -35,20 +37,8 @@ GlobalContext GlobalCtx;
 
 #define Diag if (Verbose) llvm::errs()
 
-void doWriteback(Module *M, StringRef name)
-{
-	std::string err;
-	OwningPtr<tool_output_file> out(
-		new tool_output_file(name.data(), err, raw_fd_ostream::F_Binary));
-	if (!err.empty()) {
-		Diag << "Cannot write back to " << name << ": " << err << "\n";
-		return;
-	}
-	M->print(out->os(), NULL);
-	out->keep();
-}
 
-
+#if 0
 void IterativeModulePass::run(ModuleList &modules) {
 
 	ModuleList::iterator i, e;
@@ -87,16 +77,17 @@ void IterativeModulePass::run(ModuleList &modules) {
 			
 	Diag << "[" << ID << "] Done!\n";
 }
+#endif
 
 int main(int argc, char **argv)
 {
-//	llvm::errs() << "path Analysis main \n" ;
+	llvm::errs() << "path Analysis main \n" ;
 	// Print a stack trace if we signal out.
 	sys::PrintStackTraceOnErrorSignal();
 	PrettyStackTraceProgram X(argc, argv);
 
 //	llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
-	cl::ParseCommandLineOptions(argc, argv, "global analysis\n");
+	cl::ParseCommandLineOptions(argc, argv, "pathanalysis\n");
 	SMDiagnostic Err;	
 	
 	// Loading modules
@@ -126,29 +117,6 @@ int main(int argc, char **argv)
 
 		Modules.push_back(std::make_pair(M, InputFilenames[i]));
 	}
-
-	CallGraphCFG CGCFGPass(&GlobalCtx);
-	CGCFGPass.run(Modules);
-	// Main workflow
-	//CallGraphPass CGPass(&GlobalCtx);
-	//CGPass.run(Modules);
-
-	//TaintPass TPass(&GlobalCtx);
-	//TPass.run(Modules);
-
-	//RangePass RPass(&GlobalCtx);
-	//RPass.run(Modules);
-
-	//if (NoWriteback) {
-		//errs() << "------------------dumpCallee-----------------\n";
-		//CGPass.dumpCallees();
-		//errs() << "------------------dumpFuncPtrs-----------------\n";
-		//CGPass.dumpFuncPtrs();
-		//errs() << "------------------dumpTaints-----------------\n";
-		//TPass.dumpTaints();
-		//errs() << "------------------dumpRange-----------------\n";
-		//RPass.dumpRange();
-	//}
 
 	return 0;
 }

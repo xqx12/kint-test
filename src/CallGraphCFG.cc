@@ -150,7 +150,7 @@ bool CallGraphCFG::findBBPath(CallGraphNode *n, std::vector<BasicBlock*> &path, 
 	}
 	return false;
 }
-
+#if 0
 bool CallGraphCFG::runOnModule(Module &M) {
 	//CallGraph *CG = &getAnalysis<CallGraph>();
 	CallGraph &CG = getAnalysis<CallGraph>();
@@ -175,6 +175,8 @@ bool CallGraphCFG::runOnModule(Module &M) {
 	}
 	return false;
 }
+#endif
+
 
 bool CallGraphCFG::doModulePass(Module *M) {
 	CallGraph *CG = &getAnalysis<CallGraph>();
