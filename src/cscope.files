@@ -1,4 +1,5 @@
 ./IntGlobal.cc
+./PathAnalysis.cc
 ./SMTSolver.h
 ./Annotation.cc
 ./CmpSat.cc
@@ -13,6 +14,7 @@
 ./SMTSonolar.cc
 ./IntSat.cc
 ./Diagnostic.h
+./PathAnalysis.h
 ./IntGlobal.h
 ./IdealShift.cc
 ./Annotation.h
@@ -23,6 +25,8 @@
 ./SMTBoolector.cc
 ./CmpOverflow.cc
 ./CmpTautology.cc
+./PathAnno.cc
+./PathAnno.h
 ./SMTSolver.cc
 ./ValueGen.h
 ./Diagnostic.cc
@@ -30,6 +34,7 @@
 ./PathGen.h
 ./LoadRewrite.cc
 ./OverflowIdiom.cc
+./CallGraphCFG.cc
 ./Range.cc
 ./IntRewrite.cc
 ./xCallGraph.cc

@@ -1,4 +1,9 @@
-#pragma once
+/*
+* Filename: PathAnalysis.h
+* Last modified: 2014-01-29 08:40
+* Author: Qixue Xiao <xiaoqixue_1@163.com>
+* Description: 
+*/
 
 #include <llvm/DebugInfo.h>
 #include <llvm/Module.h>
@@ -17,7 +22,14 @@
 #include <sstream>
 #include <string>
 
-#include "CRange.h"
+using namespace llvm;
+
+//--------------data structure for entry and ends-----------
+// < Name, <filename, lineno> >
+typedef std::map<std::string, unsigned> EntryInfo;
+typedef std::map<std::string, EntryInfo> Entry;
+typedef std::vector< Entry > Entrys;
+
 
 typedef std::vector< std::pair<llvm::Module *, llvm::StringRef> > ModuleList;
 typedef llvm::SmallPtrSet<llvm::Function *, 8> FuncSet;
@@ -25,14 +37,12 @@ typedef std::map<llvm::StringRef, llvm::Function *> FuncMap;
 typedef std::map<std::string, FuncSet> FuncPtrMap;
 typedef llvm::DenseMap<llvm::CallInst *, FuncSet> CalleeMap;
 typedef std::set<llvm::StringRef> DescSet;
-typedef std::map<std::string, CRange> RangeMap;
+//typedef std::map<std::string, CRange> RangeMap;
 
 //addbyxqx201401 for taint_analysis
 typedef std::set<llvm::Value *> ValueSet;
 typedef llvm::ArrayRef<ValueSet> ArraySet;
 
-
-using namespace llvm;
 
 
 struct GlobalContext {
@@ -49,7 +59,7 @@ struct GlobalContext {
 	//TaintMap Taints;
 
 	// Ranges
-	RangeMap IntRanges;
+//	RangeMap IntRanges;
 };
 
 class IterativeModulePass {

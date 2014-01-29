@@ -16,9 +16,10 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Path.h"
 
+#include <libxml/xmlmemory.h>
+#include <libxml/parser.h>
 #include "PathAnalysis.h"
-//#include "IntGlobal.h"
-//#include "Annotation.h"
+
 
 using namespace llvm;
 
@@ -79,6 +80,73 @@ void IterativeModulePass::run(ModuleList &modules) {
 }
 #endif
 
+void getEntrys(std::string docname, Entrys *res)
+{
+	xmlDocPtr doc;
+	xmlNodePtr cur;
+
+	doc = xmlParseFile(docname.c_str());
+
+	if (!doc) return;
+	Diag << "xmlfile:" << docname.c_str() << "\n";
+
+	cur = xmlDocGetRootElement(doc);
+
+	if (!cur) {
+		xmlFreeDoc(doc);
+		return;
+	}
+
+	// Iterate over defects
+	while (cur) {
+		if (!xmlStrcmp(cur->name, (const xmlChar *) "entry")) {
+			Diag << "-----find entry-----\n";
+			xmlNodePtr d = cur->xmlChildrenNode;
+			std::string file; 
+			std::string name ;
+			unsigned line = 0;
+			EntryInfo eninfo;
+			Entry en;
+
+			while (d) {
+				if (!xmlStrcmp(d->name, (const xmlChar *) "name")) {
+					name = (char*)xmlNodeListGetString(doc, d->xmlChildrenNode, 1);
+					//file = (char*)xmlNodeListGetString(doc, d->xmlChildrenNode, 1);
+					Diag << "\tname: " << name.c_str() << "\n";
+					//lines.clear();
+				}
+				else if (!xmlStrcmp(d->name, (const xmlChar *) "info")) {
+					xmlNodePtr e = d->xmlChildrenNode;
+					while (e) {
+						if (!xmlStrcmp(e->name, (const xmlChar *) "file")) {
+							file = (char*)xmlNodeListGetString(doc, e->xmlChildrenNode, 1);
+							Diag << "\tfilename: " << file.c_str() << "\n";
+						}
+						if (!xmlStrcmp(e->name, (const xmlChar *) "line")) {
+							char *val = (char*)xmlNodeListGetString(doc, e->xmlChildrenNode, 1);
+							//lines.push_back(atoi(val));
+							line = atoi(val);
+							Diag << "\tline: " << atoi(val) << "\n" ;
+						}
+						e = e->next;
+					}
+					eninfo.insert(std::make_pair(file, line));
+				}
+				en.insert(std::make_pair(name, eninfo));
+				d = d->next;
+			}
+			if (name != "" && file != "" && line != 0){
+				Diag << "insert entry\n";	//res->insert(std::make_pair(file,lines));
+				res->push_back(en);				
+			}
+		}
+		cur = cur->next;
+	}
+
+	xmlFreeDoc(doc);
+}
+
+
 int main(int argc, char **argv)
 {
 	llvm::errs() << "path Analysis main \n" ;
@@ -94,6 +162,10 @@ int main(int argc, char **argv)
 	Diag << "Total " << InputFilenames.size() << " file(s)\n";
 //	llvm::errs() << "Total " << InputFilenames.size() << " file(s)\n";
 
+	Entrys en;
+	getEntrys("/tmp/entrys.xml", &en);
+
+#if 0
 	for (unsigned i = 0; i < InputFilenames.size(); ++i) {
 		// use separate LLVMContext to avoid type renaming
 		LLVMContext *LLVMCtx = new LLVMContext();
@@ -117,7 +189,7 @@ int main(int argc, char **argv)
 
 		Modules.push_back(std::make_pair(M, InputFilenames[i]));
 	}
-
+#endif
 	return 0;
 }
 
