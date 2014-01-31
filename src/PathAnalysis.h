@@ -28,7 +28,8 @@ using namespace llvm;
 // < Name, <filename, lineno> >
 typedef std::map<std::string, unsigned> EntryInfo;
 typedef std::map<std::string, EntryInfo> Entry;
-typedef std::vector< Entry > Entrys;
+//typedef std::vector< Entry > Entrys;
+typedef std::vector< std::pair<std::string, std::pair<std::string, unsigned> > > Entrys;
 
 
 typedef std::vector< std::pair<llvm::Module *, llvm::StringRef> > ModuleList;

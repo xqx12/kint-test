@@ -14,11 +14,40 @@
 #include <llvm/DebugInfo.h>
 
 #include "PathAnno.h"
+#include <iostream>
+#include <stdio.h>
 
 using namespace llvm;
 
 
+static void getPath(SmallVectorImpl<char> &Path, const MDNode *MD) {
+	if(MD==NULL)
+		return;
+	StringRef Filename = DIScope(MD).getFilename();
+	if (sys::path::is_absolute(Filename))
+		Path.append(Filename.begin(), Filename.end());
+	else
+		sys::path::append(Path, DIScope(MD).getDirectory(), Filename);
+}
 
+// get the Instruction in c code location
+// addbyxqx201401
+static std::string getInstPath(Instruction *I, unsigned &LineNo, unsigned &ColNo)
+{
+	MDNode *MD = I->getDebugLoc().getAsMDNode(I->getContext());
+	if (!MD)
+		return "";
+	DILocation Loc(MD);
+	SmallString<64> Path;
+	getPath(Path, Loc.getScope());
+
+	LineNo = Loc.getLineNumber();
+	ColNo = Loc.getColumnNumber();
+	std::string strPath = Path.str();
+	return strPath;
+	
+}
+#if 0
 static bool annotateSink(CallInst *CI) {
 	#define P std::make_pair
 	static std::pair<const char *, int> Allocs[] = {
@@ -65,7 +94,7 @@ static bool annotateSink(CallInst *CI) {
 	}
 	return false;
 }
-
+#endif
 
 bool PathAnnoPass::runOnFunction(Function &F) {
 	bool Changed = false;
@@ -81,23 +110,22 @@ bool PathAnnoPass::runOnFunction(Function &F) {
 	for (inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i) {
 		Instruction *I = &*i;
 		I->dump();
-		if (CallInst *CI = dyn_cast<CallInst>(I)) {
-			Changed |= annotateSink(CI);
-		}
 
-		//if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
-			//Changed |= annotateLoadStore(I);
-		//} else if (CallInst *CI = dyn_cast<CallInst>(I)) {
-			//if (!CI->getCalledFunction())
-				//continue;
-			//Changed |= annotateTaintSource(CI, EraseSet);
-			//Changed |= annotateSink(CI);
-		//}
+		std::string InstPath;
+		unsigned LineNo,ColNo;
+		char tmpBuf[256] = {0};
+		InstPath = getInstPath(I, LineNo, ColNo);
+
+		if(InstPath.empty()) continue;
+		//TODO: how to convert int to string in llvm ??
+		sprintf(tmpBuf,"\t%s::%d:%d\n",InstPath.c_str(),LineNo,ColNo); 
+		OS << tmpBuf << "\n";
+		//OS << "\t" << InstPath << "::" << LineNo << ":" << ColNo << "\n" ;
+		//std::strstream sstr;
+		//sstr << LineNo ;
+
 	}
-	for (SmallPtrSet<Instruction *, 4>::iterator i = EraseSet.begin(),
-			e = EraseSet.end(); i != e; ++i) {
-		(*i)->eraseFromParent();
-	}
+
 	return Changed;
 }
 

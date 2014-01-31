@@ -19,6 +19,7 @@
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include "PathAnalysis.h"
+#include "PathAnno.h"
 
 
 using namespace llvm;
@@ -137,13 +138,24 @@ void getEntrys(std::string docname, Entrys *res)
 			}
 			if (name != "" && file != "" && line != 0){
 				Diag << "insert entry\n";	//res->insert(std::make_pair(file,lines));
-				res->push_back(en);				
+				//res->push_back(en);				
+				res->push_back(std::make_pair(name, make_pair(file,line)));
 			}
 		}
 		cur = cur->next;
 	}
 
 	xmlFreeDoc(doc);
+}
+
+void dumpEntrys(Entrys *E)
+{
+	for( Entrys::iterator i = E->begin(), e = E->end(); i!=e; ++i)
+	{
+		Diag << "name:" << (i->first) << "\n";
+		std::string name = (i->first);	
+		Diag << "\tfile:" << (i->second).first << ":" <<   (i->second).second <<"\n";
+	}
 }
 
 
@@ -164,8 +176,8 @@ int main(int argc, char **argv)
 
 	Entrys en;
 	getEntrys("/tmp/entrys.xml", &en);
+	//dumpEntrys(&en);
 
-#if 0
 	for (unsigned i = 0; i < InputFilenames.size(); ++i) {
 		// use separate LLVMContext to avoid type renaming
 		LLVMContext *LLVMCtx = new LLVMContext();
@@ -179,6 +191,10 @@ int main(int argc, char **argv)
 
 		Diag << "Loading '" << InputFilenames[i] << "'\n";
 
+		PathAnnoPass PAnnoPass;
+		for (Module::iterator j = M->begin(), je = M->end(); j != je; ++j)
+			PAnnoPass.runOnFunction(*j);
+
 		// annotate
 		//static AnnotationPass AnnoPass;
 		//AnnoPass.doInitialization(*M);
@@ -189,7 +205,7 @@ int main(int argc, char **argv)
 
 		Modules.push_back(std::make_pair(M, InputFilenames[i]));
 	}
-#endif
+
 	return 0;
 }
 

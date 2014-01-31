@@ -1,5 +1,7 @@
-<defect>
-	<file>/home/xqx/projects/test/testcase/bench_test.c</file>
-	<event>entry</event>
-	<line>14</line>
-</defect>
+<entry>
+	<name>main</name>
+	<info>
+		<file>/home/xqx/projects/test/testcase/bench_test.c</file>
+		<line>14</line>
+	</info>
+</entry>
