@@ -1,7 +1,17 @@
 <entry>
-	<name>main</name>
-	<info>
+	<start>
+		<name>main</name>
 		<file>/home/xqx/projects/test/testcase/bench_test.c</file>
-		<line>14</line>
-	</info>
+		<line>46</line>
+	</start>
+	<start>
+		<name>test</name>
+		<file>/home/xqx/projects/test/testcase/bench_test.c</file>
+		<line>30</line>
+	</start>
+	<end>
+		<name>malloc</name>
+		<file>/home/xqx/projects/test/testcase/bench_test.c</file>
+		<line>8</line>
+	</end>
 </entry>

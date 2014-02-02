@@ -96,6 +96,91 @@ static bool annotateSink(CallInst *CI) {
 }
 #endif
 
+bool PathAnnoPass::findLineInBB(BasicBlock *BB, std::string srcFile, unsigned srcLine)
+{
+	for (BasicBlock::iterator it = BB->begin(), ie = BB->end(); it != ie; ++it) {
+		if (Instruction *I = dyn_cast<Instruction>(&*it)) {
+			unsigned bbLine, bbCol;
+			std::string bbFile = getInstPath(I, bbLine, bbCol);
+			//std::cerr << " :checking " << bbFile << " : " << bbLine << "\n";
+			if ((bbFile == srcFile) && (bbLine == srcLine))
+				return true;
+		}
+	}		
+	return false;
+}
+
+bool PathAnnoPass::findLineInFunction(Function *F, BasicBlock **BB, std::string srcFile, unsigned srcLine)
+{
+	for (Function::iterator bbIt = F->begin(), bb_ie = F->end(); bbIt != bb_ie; ++bbIt) {
+		*BB = bbIt;
+		if (findLineInBB(*BB,srcFile,srcLine))
+			return true;
+	}
+	return false;
+}
+
+int PathAnnoPass::AnnoStartEntrys(Function *F, Entrys *E, bool bEntry)
+{
+	int ret = 0;
+	bool bFound;
+	BasicBlock *bb = NULL;
+	std::string Anno;
+	raw_ostream &OS = dbgs();
+
+	for( Entrys::iterator i = E->begin(), e = E->end(); i!=e; ++i)
+	{
+		std::cerr << "Finding in " <<  (i->second).first<< " : " << (i->second).second;
+		OS << "in func:" << F->getName() <<"\n";
+		bFound = findLineInFunction(F, &bb, (i->second).first, (i->second).second);  
+		if(bFound) 
+		{
+			std::cerr << "Found in " <<  (i->second).first<< " : " << (i->second).second << "\n";
+			//Annotation in the bb's first Instruction
+			Instruction *I = &bb->front();
+			if(I == NULL)
+				continue;
+			LLVMContext &VMCtx = I->getContext();
+			StringRef Desc = (i->second).first + ":" ;
+			MDNode *MD = MDNode::get(VMCtx, MDString::get(VMCtx, Desc));
+			I->setMetadata(bEntry ? MD_PATH_ENTRY:MD_PATH_END,  MD);
+
+			ret++;
+		}
+	}
+	//if( findLineInFunction(F) )
+	//{
+			////do annotation
+
+	//}
+	//else{
+	
+	//}
+	return ret;
+}
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  AnnoEndEntrys
+ *  Description:  
+ * =====================================================================================
+ */
+int	PathAnnoPass::AnnoEndEntrys(Function *F, Entrys *E )
+{
+	int ret = 0;
+
+	return ret;
+}		/* -----  end of function AnnoEndEntrys  ----- */
+
+
+
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  runOnFunction
+ *  Description:  checking all the BB in a Function.
+ * =====================================================================================
+ */
 bool PathAnnoPass::runOnFunction(Function &F) {
 	bool Changed = false;
 

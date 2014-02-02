@@ -81,7 +81,7 @@ void IterativeModulePass::run(ModuleList &modules) {
 }
 #endif
 
-void getEntrys(std::string docname, Entrys *res)
+void getEntrys(std::string docname, Entrys *res, std::string entryName)
 {
 	xmlDocPtr doc;
 	xmlNodePtr cur;
@@ -106,19 +106,17 @@ void getEntrys(std::string docname, Entrys *res)
 			std::string file; 
 			std::string name ;
 			unsigned line = 0;
-			EntryInfo eninfo;
-			Entry en;
+			//EntryInfo eninfo;
+			//Entry en;
 
 			while (d) {
-				if (!xmlStrcmp(d->name, (const xmlChar *) "name")) {
-					name = (char*)xmlNodeListGetString(doc, d->xmlChildrenNode, 1);
-					//file = (char*)xmlNodeListGetString(doc, d->xmlChildrenNode, 1);
-					Diag << "\tname: " << name.c_str() << "\n";
-					//lines.clear();
-				}
-				else if (!xmlStrcmp(d->name, (const xmlChar *) "info")) {
+				if (!xmlStrcmp(d->name, (const xmlChar *) entryName.c_str())) {
 					xmlNodePtr e = d->xmlChildrenNode;
-					while (e) {
+					while( e ) {
+						if(!xmlStrcmp(e->name, (const xmlChar *) "name")) {
+							name = (char*)xmlNodeListGetString(doc, e->xmlChildrenNode, 1);
+							Diag << "\tname: " << name.c_str() << "\n";
+						}
 						if (!xmlStrcmp(e->name, (const xmlChar *) "file")) {
 							file = (char*)xmlNodeListGetString(doc, e->xmlChildrenNode, 1);
 							Diag << "\tfilename: " << file.c_str() << "\n";
@@ -131,15 +129,13 @@ void getEntrys(std::string docname, Entrys *res)
 						}
 						e = e->next;
 					}
-					eninfo.insert(std::make_pair(file, line));
+					if (name != "" && file != "" && line != 0){
+						Diag << "insert entry\n";	//res->insert(std::make_pair(file,lines));
+						//res->push_back(en);				
+						res->push_back(std::make_pair(name, make_pair(file,line)));
+					}
 				}
-				en.insert(std::make_pair(name, eninfo));
 				d = d->next;
-			}
-			if (name != "" && file != "" && line != 0){
-				Diag << "insert entry\n";	//res->insert(std::make_pair(file,lines));
-				//res->push_back(en);				
-				res->push_back(std::make_pair(name, make_pair(file,line)));
 			}
 		}
 		cur = cur->next;
@@ -158,6 +154,19 @@ void dumpEntrys(Entrys *E)
 	}
 }
 
+void doWriteback(Module *M, StringRef name)
+{
+	std::string err;
+	OwningPtr<tool_output_file> out(
+		new tool_output_file(name.data(), err, raw_fd_ostream::F_Binary));
+	if (!err.empty()) {
+		Diag << "Cannot write back to " << name << ": " << err << "\n";
+		return;
+	}
+	M->print(out->os(), NULL);
+	out->keep();
+}
+
 
 int main(int argc, char **argv)
 {
@@ -174,9 +183,11 @@ int main(int argc, char **argv)
 	Diag << "Total " << InputFilenames.size() << " file(s)\n";
 //	llvm::errs() << "Total " << InputFilenames.size() << " file(s)\n";
 
-	Entrys en;
-	getEntrys("/tmp/entrys.xml", &en);
-	//dumpEntrys(&en);
+	Entrys enStart, enEnd;
+	getEntrys("/tmp/entrys.xml", &enStart, "start");
+	getEntrys("/tmp/entrys.xml", &enEnd, "end");
+	dumpEntrys(&enStart);
+	dumpEntrys(&enEnd);
 
 	for (unsigned i = 0; i < InputFilenames.size(); ++i) {
 		// use separate LLVMContext to avoid type renaming
@@ -192,9 +203,14 @@ int main(int argc, char **argv)
 		Diag << "Loading '" << InputFilenames[i] << "'\n";
 
 		PathAnnoPass PAnnoPass;
-		for (Module::iterator j = M->begin(), je = M->end(); j != je; ++j)
-			PAnnoPass.runOnFunction(*j);
-
+		for (Module::iterator j = M->begin(), je = M->end(); j != je; ++j){
+			//PAnnoPass.runOnFunction(*j);
+			PAnnoPass.AnnoStartEntrys(j,&enStart, true); 
+			PAnnoPass.AnnoStartEntrys(j,&enEnd, false); 
+			//j->dump();
+		}
+		llvm::StringRef newFile = InputFilenames[i] + ".anno" ;
+		doWriteback(M, newFile.str());
 		// annotate
 		//static AnnotationPass AnnoPass;
 		//AnnoPass.doInitialization(*M);
