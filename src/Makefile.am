@@ -29,11 +29,15 @@ libsat_la_LIBADD   = -lboolector -llgl
 #libsat_la_LIBADD   = -lz3 -lgomp
 libsat_la_LDFLAGS  = -L$(top_builddir)/lib
 
+
+libintck_la_CPPFLAGS = -I/usr/include/libxml2 \
+			-I/home/xqx/projects/git/BGL-test/boost_1_55_0/installed/include \
+				-L/home/xqx/projects/git/BGL-test/boost_1_55_0/installed/lib
 libintck_la_SOURCES = IntRewrite.cc IntLibcalls.cc IntSat.cc \
 	OverflowIdiom.cc OverflowSimplify.cc xCallGraph.cc xCFG.cc \
-	LoadRewrite.cc
+	LoadRewrite.cc xCallPaths.cc
 libintck_la_LIBADD  = libsat.la
-libintck_la_LDFLAGS = -module
+libintck_la_LDFLAGS = -module -lxml2
 
 libcmpck_la_SOURCES = CmpTautology.cc CmpOverflow.cc CmpSat.cc
 libcmpck_la_LIBADD  = libsat.la

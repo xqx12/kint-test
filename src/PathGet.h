@@ -53,6 +53,7 @@ public:
 
 	virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
 		AU.setPreservesCFG();
+		AU.addRequired<CallGraph>();
 	}
 	//virtual bool runOnFunction(llvm::Function &);
 	virtual bool runOnModule(Module &_M);

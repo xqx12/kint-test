@@ -127,6 +127,7 @@ void xCallGraphPass::printCalledFuncPath(Function *srcFunc, Function *dstFunc){
 	CalledFunctions::iterator ii, ee;
 	ii = calledFunctionMap[srcFunc].begin();
 	ee = calledFunctionMap[dstFunc].end();
+	llvm::errs() << "======print path===================\n\n";
 	for( ; ii != ee; ++ii){
 		Function *FTmp = ii->first;
 		Instruction *ITmp = ii->second;
@@ -134,7 +135,7 @@ void xCallGraphPass::printCalledFuncPath(Function *srcFunc, Function *dstFunc){
 		llvm::errs() << "\t" << FTmp->getName() << "-->" ;
 		llvm::errs() << "\n" << *ITmp <<"\n";
 		if( FTmp == dstFunc ){
-			llvm::errs() << "end. \na path found\n\n";
+			llvm::errs() << "===print path============end. \na path found\n\n";
 			break;
 		}
 		else
@@ -361,6 +362,7 @@ bool xCallGraphPass::runOnModule(Module &M) {
 
 	}
 
+	llvm::errs() << "=================================\n";
 	llvm::errs() << "get Function Path: " << endFunc->getName() 
 		<< " to " << startFunc->getName() << " \n";
 
@@ -372,10 +374,11 @@ bool xCallGraphPass::runOnModule(Module &M) {
 		//llvm::errs() << "called by:" << FTmp->getName() << "\n" ;
 	//}
 
-//	printCalledFuncAndCFGPath(endFunc, startFunc);
-	CollectPathConstraintsInFunction(endFunc, startFunc);
+	printCalledFuncAndCFGPath(endFunc, startFunc);
+	//CollectPathConstraintsInFunction(endFunc, startFunc);
 
 	llvm::errs() << "on-end\n";
+	llvm::errs() << "=================================\n";
 	return false;
 }
 
