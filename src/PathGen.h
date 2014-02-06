@@ -4,6 +4,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include "SMTSolver.h"
 
+
 namespace llvm {
 	class BasicBlock;
 	class BranchInst;

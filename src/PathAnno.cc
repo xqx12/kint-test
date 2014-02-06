@@ -12,6 +12,7 @@
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/Transforms/Utils/Local.h>
 #include <llvm/DebugInfo.h>
+#include "llvm/Analysis/CallGraph.h"
 
 #include "PathAnno.h"
 #include <iostream>
@@ -184,6 +185,9 @@ int	PathAnnoPass::AnnoEndEntrys(Function *F, Entrys *E )
 bool PathAnnoPass::runOnFunction(Function &F) {
 	bool Changed = false;
 
+	//CallGraph *CG = &getAnalysis<CallGraph>();
+	//CallGraphNode *root = CG->getRoot();
+	//if (root == NULL) return true;
 	//Changed |= annotateArguments(F);
 
 	//addbyxqx201312

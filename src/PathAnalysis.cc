@@ -20,6 +20,7 @@
 #include <libxml/parser.h>
 #include "PathAnalysis.h"
 #include "PathAnno.h"
+#include "PathGet.h"
 
 
 using namespace llvm;
@@ -211,6 +212,11 @@ int main(int argc, char **argv)
 		}
 		llvm::StringRef newFile = InputFilenames[i] + ".anno" ;
 		doWriteback(M, newFile.str());
+
+		//pathgetpass
+		PathGetPass pPGetPass;
+		pPGetPass.runOnModule(*M);
+
 		// annotate
 		//static AnnotationPass AnnoPass;
 		//AnnoPass.doInitialization(*M);
