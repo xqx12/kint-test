@@ -1,0 +1,252 @@
+InsertFuncName: llvm.sadd.with.overflow.i32
+insertIntsat:
+ 	Value:   %1 = extractvalue { i32, i1 } %0, 1, !dbg !18
+	Inst:   %add = add nsw i32 %a, %b, !dbg !18
+	Instp:   %add = add nsw i32 %a, %b, !dbg !18
+	Bug: sadd
+
+CI:  call void @int.sat(i1 %1), !dbg !18, !bug !20
+InsertFuncName: llvm.sadd.with.overflow.i32
+insertIntsat:
+ 	Value:   %3 = extractvalue { i32, i1 } %2, 1, !dbg !22
+	Inst:   %add.i = add nsw i32 %call, %call2, !dbg !22
+	Instp:   %add.i = add nsw i32 %call, %call2, !dbg !22
+	Bug: sadd
+
+CI:  call void @int.sat(i1 %3), !dbg !22, !bug !25
+
+declare void @int.sat(i1) nounwind
+
+
+define i32 @add(i32 %a, i32 %b) nounwind uwtable readnone {
+entry:
+  %0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 %b), !dbg !18
+  %1 = extractvalue { i32, i1 } %0, 1, !dbg !18
+  tail call void @int.sat(i1 %1), !dbg !18, !bug !20
+  %add = add nsw i32 %b, %a, !dbg !18
+  ret i32 %add, !dbg !18
+}
+
+--------runOnFunction----------
+check CI:  tail call void @int.sat(i1 %1), !dbg !18, !bug !20
+Value:  %1 = extractvalue { i32, i1 } %0, 1, !dbg !18
+Metadata:0x162a260
+query---
+Value:  %1 = extractvalue { i32, i1 } %0, 1, !dbg !18
+Instruction:  tail call void @int.sat(i1 %1), !dbg !18, !bug !20
+ValueVisitor-analyze:===
+  %1 = extractvalue { i32, i1 } %0, 1, !dbg !18
+I->OPCODE = 56
+ValueVisitor-analyze:===end
+ValueVisitor-analyze:===
+i32 %a
+ValueVisitor-analyze:===end
+mk_fresh:---
+mk_fresh:---%a@0x15dbe10
+ValueVisitor-analyze:===
+i32 %b
+ValueVisitor-analyze:===end
+mk_fresh:---
+mk_fresh:---%b@0x15df780
+Value SMT ---
+(benchmark notroot11
+:logic QF_BV
+:extrafuns ((%a@0x15dbe10 BitVec[32]))
+:extrafuns ((%b@0x15df780 BitVec[32]))
+:formula
+(let (?e3 (extract[31:31] %a@0x15dbe10))
+(let (?e4 (extract[31:31] %b@0x15df780))
+(let (?e5 (bvadd %a@0x15dbe10 %b@0x15df780))
+(let (?e6 (extract[31:31] ?e5))
+(let (?e7 (bvand ?e3 ?e4))
+(let (?e8 (bvand (bvnot ?e6) ?e7))
+(let (?e9 (bvand (bvnot ?e3) (bvnot ?e4)))
+(let (?e10 (bvand ?e6 ?e9))
+(let (?e11 (bvand (bvnot ?e8) (bvnot ?e10)))
+(not (= (bvnot ?e11) bv0[1]))
+))))))))))
+
+Path SMT ---
+(benchmark notroot12
+:logic QF_BV
+:formula
+(let (?e12 bv0[1])
+(not (= (bvnot ?e12) bv0[1]))
+))
+
+(benchmark notroot11
+:logic QF_BV
+:extrafuns ((%a@0x15dbe10 BitVec[32]))
+:extrafuns ((%b@0x15df780 BitVec[32]))
+:formula
+(let (?e3 (extract[31:31] %a@0x15dbe10))
+(let (?e4 (extract[31:31] %b@0x15df780))
+(let (?e5 (bvadd %a@0x15dbe10 %b@0x15df780))
+(let (?e6 (extract[31:31] ?e5))
+(let (?e7 (bvand ?e3 ?e4))
+(let (?e8 (bvand (bvnot ?e6) ?e7))
+(let (?e9 (bvand (bvnot ?e3) (bvnot ?e4)))
+(let (?e10 (bvand ?e6 ?e9))
+(let (?e11 (bvand (bvnot ?e8) (bvnot ?e10)))
+(not (= (bvnot ?e11) bv0[1]))
+))))))))))
+
+---
+bug: sadd
+status: sat
+classify:---
+  tail call void @int.sat(i1 %1), !dbg !18, !bug !20
+stack: 
+ - /home/xqx/projects/git/kint-test/test/xqx-test/add.c:22:2
+
+define i32 @main(i32 %argc, i8** nocapture %argv) nounwind uwtable {
+entry:
+  %0 = getelementptr i8** %argv, i64 2, !dbg !18
+  %1 = load volatile i8** %0, align 8, !dbg !18
+  %2 = getelementptr i8** %argv, i64 1, !dbg !18
+  %3 = load volatile i8** %2, align 8, !dbg !18
+  %cmp = icmp slt i32 %argc, 3, !dbg !18
+  br i1 %cmp, label %return, label %if.end, !dbg !18
+
+if.end:                                           ; preds = %entry
+  %call = tail call i32 (...)* @atoi(i8* %3) nounwind, !dbg !20
+  %call2 = tail call i32 (...)* @atoi(i8* %1) nounwind, !dbg !21
+  %4 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %call, i32 %call2), !dbg !22
+  %5 = extractvalue { i32, i1 } %4, 1, !dbg !22
+  tail call void @int.sat(i1 %5), !dbg !22, !bug !25
+  %add.i = add nsw i32 %call2, %call, !dbg !22
+  %call4 = tail call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([7 x i8]* @.str, i64 0, i64 0), i32 %add.i), !dbg !26
+  br label %return, !dbg !27
+
+return:                                           ; preds = %entry, %if.end
+  %retval.0 = phi i32 [ 0, %if.end ], [ -1, %entry ]
+  ret i32 %retval.0, !dbg !27
+}
+
+--------runOnFunction----------
+check CI:  tail call void @int.sat(i1 %5), !dbg !22, !bug !25
+Value:  %5 = extractvalue { i32, i1 } %4, 1, !dbg !22
+Metadata:0x162a260
+query---
+Value:  %5 = extractvalue { i32, i1 } %4, 1, !dbg !22
+Instruction:  tail call void @int.sat(i1 %5), !dbg !22, !bug !25
+ValueVisitor-analyze:===
+  %5 = extractvalue { i32, i1 } %4, 1, !dbg !22
+I->OPCODE = 56
+ValueVisitor-analyze:===end
+ValueVisitor-analyze:===
+  %call = tail call i32 (...)* @atoi(i8* %3) nounwind, !dbg !20
+I->OPCODE = 48
+ValueVisitor-analyze:===end
+mk_fresh:---
+mk_fresh:---%call@0x15d6bb0
+ValueVisitor-analyze:===
+  %call2 = tail call i32 (...)* @atoi(i8* %1) nounwind, !dbg !21
+I->OPCODE = 48
+ValueVisitor-analyze:===end
+mk_fresh:---
+mk_fresh:---%call2@0x15d6eb0
+ValueVisitor-analyze:===
+  %cmp = icmp slt i32 %argc, 3, !dbg !18
+I->OPCODE = 45
+ValueVisitor-analyze:===end
+visitICmpInst++++
+ValueVisitor-analyze:===
+i32 %argc
+ValueVisitor-analyze:===end
+mk_fresh:---
+mk_fresh:---%argc@0x15d5990
+ValueVisitor-analyze:===
+i32 3
+ValueVisitor-analyze:===end
+getSuccessor(1)=if.end
+BB)=if.end
+getTermGuard:
+(benchmark root20
+:logic QF_BV
+:extrafuns ((%argc@0x15d5990 BitVec[32]))
+:formula
+(let (?e15 (extract[31:31] %argc@0x15d5990))
+(let (?e16 (extract[30:0] %argc@0x15d5990))
+(let (?e17 bv2147483644[31])
+(let (?e18 (ite (bvult ?e16 (bvnot ?e17)) bv1[1] bv0[1]))
+(let (?e20 (bvand (bvnot ?e15) (bvnot ?e18)))
+(not (= ?e20 bv0[1]))
+))))))
+
+getTermGuard---end
+Value SMT ---
+(benchmark notroot11
+:logic QF_BV
+:extrafuns ((%call@0x15d6bb0 BitVec[32]))
+:extrafuns ((%call2@0x15d6eb0 BitVec[32]))
+:formula
+(let (?e3 (extract[31:31] %call@0x15d6bb0))
+(let (?e4 (extract[31:31] %call2@0x15d6eb0))
+(let (?e5 (bvadd %call@0x15d6bb0 %call2@0x15d6eb0))
+(let (?e6 (extract[31:31] ?e5))
+(let (?e7 (bvand ?e3 ?e4))
+(let (?e8 (bvand (bvnot ?e6) ?e7))
+(let (?e9 (bvand (bvnot ?e3) (bvnot ?e4)))
+(let (?e10 (bvand ?e6 ?e9))
+(let (?e11 (bvand (bvnot ?e8) (bvnot ?e10)))
+(not (= (bvnot ?e11) bv0[1]))
+))))))))))
+
+Path SMT ---
+(benchmark root20
+:logic QF_BV
+:extrafuns ((%argc@0x15d5990 BitVec[32]))
+:formula
+(let (?e15 (extract[31:31] %argc@0x15d5990))
+(let (?e16 (extract[30:0] %argc@0x15d5990))
+(let (?e17 bv2147483644[31])
+(let (?e18 (ite (bvult ?e16 (bvnot ?e17)) bv1[1] bv0[1]))
+(let (?e20 (bvand (bvnot ?e15) (bvnot ?e18)))
+(not (= ?e20 bv0[1]))
+))))))
+
+(benchmark root21
+:logic QF_BV
+:extrafuns ((%call@0x15d6bb0 BitVec[32]))
+:extrafuns ((%call2@0x15d6eb0 BitVec[32]))
+:extrafuns ((%argc@0x15d5990 BitVec[32]))
+:formula
+(let (?e3 (extract[31:31] %call@0x15d6bb0))
+(let (?e4 (extract[31:31] %call2@0x15d6eb0))
+(let (?e5 (bvadd %call@0x15d6bb0 %call2@0x15d6eb0))
+(let (?e6 (extract[31:31] ?e5))
+(let (?e7 (bvand ?e3 ?e4))
+(let (?e8 (bvand (bvnot ?e6) ?e7))
+(let (?e9 (bvand (bvnot ?e3) (bvnot ?e4)))
+(let (?e10 (bvand ?e6 ?e9))
+(let (?e11 (bvand (bvnot ?e8) (bvnot ?e10)))
+(let (?e15 (extract[31:31] %argc@0x15d5990))
+(let (?e16 (extract[30:0] %argc@0x15d5990))
+(let (?e17 bv2147483644[31])
+(let (?e18 (ite (bvult ?e16 (bvnot ?e17)) bv1[1] bv0[1]))
+(let (?e20 (bvand (bvnot ?e15) (bvnot ?e18)))
+(let (?e21 (bvand (bvnot ?e11) ?e20))
+(not (= ?e21 bv0[1]))
+))))))))))))))))
+
+---
+bug: sadd
+status: sat
+classify:---
+  tail call void @int.sat(i1 %5), !dbg !22, !bug !25
+stack: 
+ - /home/xqx/projects/git/kint-test/test/xqx-test/add.c:22:2
+ - /home/xqx/projects/git/kint-test/test/xqx-test/add.c:37:6
+
+declare i32 @atoi(...)
+
+
+declare i32 @printf(i8* nocapture, ...) nounwind
+
+
+declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
+
+
+declare void @int.sat(i1) nounwind
+
