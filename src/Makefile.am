@@ -36,7 +36,7 @@ libintck_la_CPPFLAGS = -I/usr/include/libxml2 \
 				-L/home/xqx/data/xqx/projects/boost_1_55_0/installed/lib
 libintck_la_SOURCES = IntRewrite.cc IntLibcalls.cc IntSat.cc \
 	OverflowIdiom.cc OverflowSimplify.cc xCallGraph.cc xCFG.cc \
-	LoadRewrite.cc xCallPaths.cc
+	LoadRewrite.cc xCallPaths.cc xFunctionsAnalysis.cc
 libintck_la_LIBADD  = libsat.la
 libintck_la_LDFLAGS = -module -lxml2
 
