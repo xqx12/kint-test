@@ -276,6 +276,7 @@ void CallPathsPass::getEntryList(std::string docname, defectList *res, std::stri
 
 void CallPathsPass::dumpEntryList(defectList *d)
 {
+	Diag << "dump=======\n";
 	for( defectList::iterator i = d->begin(), e = d->end(); i!=e; ++i)
 	{
 		Diag << "file:" << (i->first) << "\n";
@@ -495,14 +496,18 @@ void CallPathsPass::buildGraph(CallGraph *CG)
 	 boost::write_graphviz(bbs_file, bbG, my_bb_label_writer(this));    
 }
 bool CallPathsPass::runOnModule(Module &_M) {
+	std::cout << "\n============CallPathsPass=====\n\n";
 	M = &_M;
 	CallGraph *CG = &getAnalysis<CallGraph>();
 	CallGraphNode *root = CG->getRoot();
 	if (root == NULL) return false;
+	std::cout << "\n=====root=======CallPathsPass=====\n\n";
 	Function *rootF = root->getFunction();
 	if (rootF == NULL) return false;
+	std::cout << "\n========func====CallPathsPass=====\n\n";
 	BasicBlock *rootBB = &rootF->getEntryBlock();
 	if (rootBB == NULL) return false;
+	std::cout << "\n=======bb=====CallPathsPass=====\n\n";
 
 	// Parse and extract data from Defect XML
 	//getDefectList("test", &dl);

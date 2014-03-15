@@ -1,6 +1,7 @@
 #AM_CXXFLAGS = `llvm-config --cxxflags` -Werror -Wall -O0 -g
 AM_CXXFLAGS =  -Werror -Wall -O0 -g \
-			   -I`llvm-config --includedir` -D_DEBUG -D_GNU_SOURCE \
+			   -I/home/xqx/data/xqx/projects/llvm-test/buildllvm31/include \
+				-I`llvm-config --includedir` -D_DEBUG -D_GNU_SOURCE \
 			   -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS \
 			   -D__STDC_LIMIT_MACROS -O3 -fomit-frame-pointer  \
 			   -fvisibility-inlines-hidden -fno-exceptions \
@@ -31,8 +32,8 @@ libsat_la_LDFLAGS  = -L$(top_builddir)/lib
 
 
 libintck_la_CPPFLAGS = -I/usr/include/libxml2 \
-			-I/home/xqx/projects/git/BGL-test/boost_1_55_0/installed/include \
-				-L/home/xqx/projects/git/BGL-test/boost_1_55_0/installed/lib
+			-I/home/xqx/data/xqx/projects/boost_1_55_0/installed/include \
+				-L/home/xqx/data/xqx/projects/boost_1_55_0/installed/lib
 libintck_la_SOURCES = IntRewrite.cc IntLibcalls.cc IntSat.cc \
 	OverflowIdiom.cc OverflowSimplify.cc xCallGraph.cc xCFG.cc \
 	LoadRewrite.cc xCallPaths.cc
@@ -48,8 +49,8 @@ intglobal_SOURCES = IntGlobal.cc Annotation.cc CallGraph.cc Taint.cc Range.cc \
 	IntGlobal.h Annotation.h CRange.h
 
 pathanalysis_CPPFLAGS = -I/usr/include/libxml2 \
-			-I/home/xqx/projects/git/BGL-test/boost_1_55_0/installed/include \
-				-L/home/xqx/projects/git/BGL-test/boost_1_55_0/installed/lib
+			-I/home/xqx/data/xqx/projects/boost_1_55_0/installed/include \
+				-L/home/xqx/data/xqx/projects/boost_1_55_0/installed/lib
 pathanalysis_LDFLAGS = `llvm-config --ldflags` -lLLVM-`llvm-config --version` -lxml2 
 pathanalysis_SOURCES = PathAnalysis.cc PathAnno.cc PathGet.cc \
 	PathAnalysis.h PathAnno.h PathGet.h
