@@ -27,19 +27,34 @@ struct ValueVisitor : InstVisitor<ValueVisitor, SMTExpr> {
 			V->dump();
 			assert(0 && "Unknown type!");
 		}
-		llvm::errs() << "ValueVisitor-analyze:===\n";
-		V->dump();
-		if (Instruction *ITmp = dyn_cast<Instruction>(V))
-			llvm::errs() << "I->OPCODE = " << ITmp->getOpcode() << "\n";
-		llvm::errs() << "ValueVisitor-analyze:===end\n";
-		if (Instruction *I = dyn_cast<Instruction>(V))
-			return visit(I);
-		else if (Constant *C = dyn_cast<Constant>(V))
-			return visitConstant(C);
-		return mk_fresh(V);
+		llvm::errs() << "ValueVisitor-analyze:===" << *V << "\n";
+		SMTExpr eRet;
+		//V->dump();
+		//if (Instruction *ITmp = dyn_cast<Instruction>(V))
+			//llvm::errs() << "I->OPCODE = " << ITmp->getOpcode() << "\n";
+		if (Instruction *I = dyn_cast<Instruction>(V)) {
+			llvm::errs() << "enter visist: V->opcode = " << I->getOpcode() << "\n";
+			eRet = visit(I);
+			llvm::errs() << "visit result of " << *I << "\n";
+			SMT.dump(eRet);
+			llvm::errs() << "ValueVisitor-analyze:===end====" << *V << "\n";
+			return eRet; //visit(I);
+		}
+		else if (Constant *C = dyn_cast<Constant>(V)){
+			llvm::errs() << "enter visitConstant: result of " << *C << "\n";
+			eRet = visitConstant(C);
+			SMT.dump(eRet);
+			llvm::errs() << "ValueVisitor-analyze:===end====" << *V << "\n";
+			return eRet;
+		}
+		eRet = mk_fresh(V);
+		SMT.dump(eRet);
+		llvm::errs() << "ValueVisitor-analyze:===end====" << *V << "\n";
+		return eRet;
 	}
 
 	SMTExpr visitInstruction(Instruction &I) {
+		llvm::errs() << "visitInstruction: " << I << "\n";
 		SMTExpr E = mk_fresh(&I);
 		// Ranges are constants, so don't worry about recursion.
 		if (MDNode *MD = I.getMetadata("intrange"))
@@ -75,6 +90,7 @@ struct ValueVisitor : InstVisitor<ValueVisitor, SMTExpr> {
 	}
 
 	SMTExpr visitBinaryOperator(BinaryOperator &I) {
+		llvm::errs() << "visitBinaryOperator: = " << I << "\n";
 		SMTExpr L = get(I.getOperand(0)), R = get(I.getOperand(1));
 		switch (I.getOpcode()) {
 		default: assert(0);
@@ -121,12 +137,20 @@ struct ValueVisitor : InstVisitor<ValueVisitor, SMTExpr> {
 	}
 
 	SMTExpr visitExtractValueInst(ExtractValueInst &I) {
+		llvm::errs() << "visitExtractValueInst: " << I << "\n";
 		IntrinsicInst *II = dyn_cast<IntrinsicInst>(I.getAggregateOperand());
+		llvm::errs() << "getIntrinsicInst: " << *II << "\n";
 		if (!II || II->getCalledFunction()->getName().find(".with.overflow.")
 				== StringRef::npos)
 			return mk_fresh(&I);
+		llvm::errs() << "getArgOperand(0): " << *(II->getArgOperand(0)) << "\n";
 		SMTExpr L = get(II->getArgOperand(0));
+		llvm::errs() << "getArgOperand(1): " << *II->getArgOperand(1) << "\n";
 		SMTExpr R = get(II->getArgOperand(1));
+		llvm::errs() << "visitExtractValueInst L: "  << "\n";
+		SMT.dump(L);
+		llvm::errs() << "visitExtractValueInst R: "  << "\n";
+		SMT.dump(R);
 		assert(I.getNumIndices() == 1);
 		switch (I.getIndices()[0]) {
 		default: II->dump(); assert(0 && "Unknown overflow!");
@@ -169,6 +193,7 @@ struct ValueVisitor : InstVisitor<ValueVisitor, SMTExpr> {
 	}
 
 	SMTExpr visitGEPOperator(GEPOperator &GEP) {
+		llvm::errs() << "visitGEPOperator+++++++++++++++++++++++\n";
 		unsigned PtrSize = TD.getPointerSizeInBits(/*GEP.getPointerAddressSpace()*/);
 		// Start from base.
 		SMTExpr Offset = get(GEP.getPointerOperand());

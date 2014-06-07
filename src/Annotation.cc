@@ -85,7 +85,8 @@ static bool annotateLoadStore(Instruction *I) {
 			Anno = getAnnotation(V, M);
 			//OS << Anno << "\n";
 		}
-	} else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
+	} 
+	else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
 		//OS << "annotateLoadStore-Load:" << "\n";
 		Value *V = SI->getPointerOperand();
 		//V->dump();

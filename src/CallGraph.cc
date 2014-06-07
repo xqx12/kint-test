@@ -26,7 +26,8 @@ CallGraphPass::processInitializers(Module *M, Constant *I, GlobalValue *V) {
 			if (ETy->isStructTy() || ETy->isArrayTy()) {
 				// nested array or struct
 				processInitializers(M, CS->getOperand(i), NULL);
-			} else if (isFunctionPointer(ETy)) {
+			} 
+			else if (isFunctionPointer(ETy)) {
 				// found function pointers in struct fields
 				if (Function *F = dyn_cast<Function>(CS->getOperand(i))) {
 					std::string Id = getStructId(STy, M, i);
@@ -34,12 +35,14 @@ CallGraphPass::processInitializers(Module *M, Constant *I, GlobalValue *V) {
 				}
 			}
 		}
-	} else if (ConstantArray *CA = dyn_cast<ConstantArray>(I)) {
+	} 
+	else if (ConstantArray *CA = dyn_cast<ConstantArray>(I)) {
 		// array of structs
 		if (CA->getType()->getElementType()->isStructTy())
 			for (unsigned i = 0; i != CA->getNumOperands(); ++i)
 				processInitializers(M, CA->getOperand(i), NULL);
-	} else if (Function *F = dyn_cast<Function>(I)) {
+	} 
+	else if (Function *F = dyn_cast<Function>(I)) {
 		// global function pointer variables
 		if (V) {
 			std::string Id = getVarId(V);
@@ -151,14 +154,16 @@ bool CallGraphPass::runOnFunction(Function *F) {
 				if (!Id.empty())
 					Changed |= findFunctions(V, Ctx->FuncPtrs[Id]);
 			}
-		} else if (ReturnInst *RI = dyn_cast<ReturnInst>(I)) {
+		} 
+		else if (ReturnInst *RI = dyn_cast<ReturnInst>(I)) {
 			// function returns
 			if (isFunctionPointer(F->getReturnType())) {
 				Value *V = RI->getReturnValue();
 				std::string Id = getRetId(F);
 				Changed |= findFunctions(V, Ctx->FuncPtrs[Id]);
 			}
-		} else if (CallInst *CI = dyn_cast<CallInst>(I)) {
+		}
+		else if (CallInst *CI = dyn_cast<CallInst>(I)) {
 			// ignore inline asm or intrinsic calls
 			if (CI->isInlineAsm() || (CI->getCalledFunction()
 					&& CI->getCalledFunction()->isIntrinsic()))
